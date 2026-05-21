@@ -13,12 +13,12 @@ APFS Purgeable: 12.3 GB
 ▶ ● [S] User App Caches    ·····  ■■■■■■□□□□      2.1 GB   ← selected (green bold)
   ○ [S] Browser Caches     ·····  ■■■■□□□□□□      1.3 GB
   ● [M] Developer Tools    ·····  ■■■■■■□□□□      1.8 GB   ← selected (green)
-  ○ [S] Node.js & JS       ·····  ■■■□□□□□□□    890 MB
-  ○ [S] Python & pip       ·····  ■■□□□□□□□□    540 MB
+  ○ [S] Node.js & JS       ·····  ■■■□□□□□□□      890 MB
+  ○ [S] Python & pip       ·····  ■■□□□□□□□□      540 MB
   ○ [M] JetBrains IDEs     ·····  ■■■■□□□□□□      1.1 GB
-  ○ [M] System & App Logs  ·····  ■□□□□□□□□□    210 MB
-  ○ [S] Temp Files         ·····  ■□□□□□□□□□    180 MB
-  ○ [R] Trash              ·····  ■■□□□□□□□□    640 MB
+  ○ [M] System & App Logs  ·····  ■□□□□□□□□□      210 MB
+  ○ [S] Temp Files         ·····  ■□□□□□□□□□      180 MB
+  ○ [R] Trash              ·····  ■■□□□□□□□□      640 MB
   [S] Safe  · Application cache directories in ~/Library/Caches  (1-9/26)
 ──────────────────────────────────────────────────────────────────────────────
  ↑↓ Navigate  Space Toggle  → Preview  Enter Clean  A All  N None  Q Quit
@@ -194,9 +194,9 @@ APFS Purgeable: 12.3 GB
 ▶ ● [S] User App Caches  ·······  ■■■■■■□□□□      2.1 GB   ← GREEN BOLD (selected + cursor)
   ○ [S] Browser Caches   ·······  ■■■■□□□□□□      1.3 GB   ← dim
   ● [M] Developer Tools  ·······  ■■■■■■□□□□      1.8 GB   ← GREEN (selected)
-  ○ [S] Node.js & JS     ·······  ■■■□□□□□□□    890 MB     ← dim
+  ○ [S] Node.js & JS     ·······  ■■■□□□□□□□      890 MB   ← dim
   ○ [M] Large Old Files  ·······                       —   ← not scanned at startup
-  ○ [R] Trash            ·······  ■■□□□□□□□□    640 MB
+  ○ [R] Trash            ·······  ■■□□□□□□□□      640 MB
   [S] Safe  · Application cache directories in ~/Library/Caches  (1-6/26)
 ──────────────────────────────────────────────────────────────────────────────
  ↑↓ Navigate  Space Toggle  → Preview  Enter Clean  A All  N None  Q Quit
@@ -247,10 +247,10 @@ Opened by pressing `→` on any category. Shows the exact list of files and fold
 ✓ Safe: Browsers re-download page assets — slightly slower first load after clean
 ──────────────────────────────────────────────────────────────────────────────
 ▶ [ ] com.apple.Safari                                              1.2 GB
-  [ ] com.google.Chrome                                           340 MB
-  [ ] org.mozilla.firefox                                          120 MB
-  [ ] com.microsoft.edgemac                                         80 MB
-  [ ] com.brave.Browser                                             45 MB
+  [ ] com.google.Chrome                                             340 MB
+  [ ] org.mozilla.firefox                                           120 MB
+  [ ] com.microsoft.edgemac                                          80 MB
+  [ ] com.brave.Browser                                              45 MB
 
 ──────────────────────────────────────────────────────────────────────────────
  ← Back  ↑↓ Navigate  Space to select files — nothing deleted until you select  Q Quit
@@ -265,10 +265,10 @@ Opened by pressing `→` on any category. Shows the exact list of files and fold
 ✓ Safe: Browsers re-download page assets — slightly slower first load after clean
 ──────────────────────────────────────────────────────────────────────────────
 ▶ [✓] com.apple.Safari                                              1.2 GB
-  [✓] com.google.Chrome                                           340 MB
-  [✓] org.mozilla.firefox                                          120 MB
-  [✓] com.microsoft.edgemac                                         80 MB
-  [✓] com.brave.Browser                                             45 MB
+  [✓] com.google.Chrome                                             340 MB
+  [✓] org.mozilla.firefox                                           120 MB
+  [✓] com.microsoft.edgemac                                          80 MB
+  [✓] com.brave.Browser                                              45 MB
 
 ──────────────────────────────────────────────────────────────────────────────
  ← Back  ↑↓ Navigate  Space Toggle  / Filter  Enter Delete 5 selected  Q Quit
