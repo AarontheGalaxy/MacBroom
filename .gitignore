@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+.Rhistory
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+# Test artifacts
+tests/tmp/
+*.log
+*.bak
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

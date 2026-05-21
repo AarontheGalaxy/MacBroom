@@ -1,0 +1,1183 @@
+#!/usr/bin/env bash
+# MacBroom – Interactive Mac disk cleaner.
+# https://github.com/taskineren/macbroom
+#
+# Usage:
+#   macbroom                   # Interactive TUI (default)
+#   macbroom scan              # Show scan report
+#   macbroom scan --json       # JSON output (for standalone apps)
+#   macbroom list <module>     # List items in module
+#   macbroom list <module> --json
+#   macbroom clean <module>    # Clean a module
+#   macbroom clean --all       # Clean all modules
+#   macbroom --dry-run         # Preview mode
+#   macbroom --version
+#   macbroom --help
+
+set -u
+
+readonly MB_VERSION="1.0.0"
+readonly MB_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── Load libraries ─────────────────────────────────────────────
+source "$MB_SCRIPT_DIR/lib/core.sh"
+source "$MB_SCRIPT_DIR/lib/disk.sh"
+source "$MB_SCRIPT_DIR/lib/ui.sh"
+source "$MB_SCRIPT_DIR/lib/undo.sh"
+source "$MB_SCRIPT_DIR/lib/cron.sh"
+
+# ── Load modules ───────────────────────────────────────────────
+source "$MB_SCRIPT_DIR/modules/user_caches.sh"
+source "$MB_SCRIPT_DIR/modules/browser.sh"
+source "$MB_SCRIPT_DIR/modules/dev_tools.sh"
+source "$MB_SCRIPT_DIR/modules/system_logs.sh"
+source "$MB_SCRIPT_DIR/modules/temp_files.sh"
+source "$MB_SCRIPT_DIR/modules/trash.sh"
+source "$MB_SCRIPT_DIR/modules/node_cache.sh"
+source "$MB_SCRIPT_DIR/modules/python_cache.sh"
+source "$MB_SCRIPT_DIR/modules/jetbrains_cache.sh"
+source "$MB_SCRIPT_DIR/modules/vscode_cache.sh"
+source "$MB_SCRIPT_DIR/modules/flutter_cache.sh"
+source "$MB_SCRIPT_DIR/modules/go_cache.sh"
+source "$MB_SCRIPT_DIR/modules/rust_cache.sh"
+source "$MB_SCRIPT_DIR/modules/ruby_cache.sh"
+source "$MB_SCRIPT_DIR/modules/java_cache.sh"
+source "$MB_SCRIPT_DIR/modules/docker_cache.sh"
+source "$MB_SCRIPT_DIR/modules/android_cache.sh"
+source "$MB_SCRIPT_DIR/modules/imessage_attachments.sh"
+source "$MB_SCRIPT_DIR/modules/maintenance.sh"
+source "$MB_SCRIPT_DIR/modules/memory_purge.sh"
+source "$MB_SCRIPT_DIR/modules/app_leftovers.sh"
+source "$MB_SCRIPT_DIR/modules/orphaned_files.sh"
+source "$MB_SCRIPT_DIR/modules/large_old_files.sh"
+source "$MB_SCRIPT_DIR/modules/ios_backups.sh"
+source "$MB_SCRIPT_DIR/modules/mail_attachments.sh"
+source "$MB_SCRIPT_DIR/modules/ai_models.sh"
+
+# ── Module registry ────────────────────────────────────────────
+MB_MOD_NAMES=(
+    user_caches  browser     dev_tools               system_logs       temp_files
+    node_cache        python_cache        jetbrains_cache        vscode_cache
+    flutter_cache     go_cache            rust_cache             ruby_cache
+    java_cache        docker_cache        android_cache
+    imessage_attachments  maintenance  memory_purge
+    app_leftovers
+    orphaned_files
+    large_old_files
+    ios_backups
+    mail_attachments
+    ai_models
+    trash
+)
+MB_MOD_LABELS=(
+    "User App Caches"  "Browser Caches"  "Developer Tool Caches"  "System & App Logs"  "Temp Files"
+    "Node.js & JS Caches"    "Python & pip Caches"    "JetBrains IDE Caches"    "VS Code Caches"
+    "Flutter & Dart Caches"  "Go Module Cache"         "Rust & Cargo Cache"      "Ruby & CocoaPods Cache"
+    "Java & Gradle Cache"    "Docker Build Cache"      "Android SDK Cache"
+    "iMessage Attachments"  "Maintenance Tasks"  "Memory Purge"
+    "App Leftovers"
+    "Orphaned App Files"
+    "Large Old Files"
+    "iOS Backups"
+    "Mail Attachments"
+    "AI Model Cache"
+    "Trash"
+)
+MB_MOD_DESCS=(
+    "Application cache directories in ~/Library/Caches"
+    "Cache directories for Safari, Chrome, Firefox, and other browsers"
+    "Build artifacts and caches for Xcode, npm, Gradle, pip, Cargo, and more"
+    "Log files and crash reports in ~/Library/Logs older than ${MB_LOG_AGE_DAYS:-7} days"
+    "Temporary files in /private/tmp and /private/var/tmp older than ${MB_TEMP_AGE_DAYS:-3} days"
+    "npm, yarn, pnpm, bun, and node-gyp cache directories"
+    "pip, conda, poetry, and pyenv cache directories"
+    "JetBrains IDE cache and log directories under ~/Library"
+    "VS Code, Cursor, and Windsurf cache directories"
+    "Flutter pub cache and Dart tool cache"
+    "Go module download cache and build cache"
+    "Cargo registry cache and git database"
+    "Ruby gem cache and CocoaPods cache"
+    "Gradle caches and daemon files"
+    "Docker builder cache and dangling images"
+    "Android SDK temporary files and cache"
+    "Photos, videos, and stickers received via Messages app"
+    "DNS flush, font cache rebuild, Time Machine snapshots, Launch Services reset"
+    "Purge inactive memory pages to free up RAM (not disk space)"
+    "Leftover files from uninstalled apps — set MB_APP_LEFTOVERS_QUERY=AppName to search"
+    "App support files with no matching installed application"
+    "Files over ${MB_LOF_MIN_SIZE_MB:-500} MB not accessed in 180+ days — size shown after opening Preview"
+    "iTunes/Finder iPhone and iPad backup folders"
+    "Cached email attachments older than 90 days"
+    "Local AI models for Ollama, LM Studio, and HuggingFace"
+    "Contents of ~/.Trash and trash folders on external volumes"
+)
+MB_MOD_SCAN_FNS=(
+    user_caches_scan   browser_scan      dev_tools_scan     system_logs_scan   temp_files_scan
+    node_cache_scan    python_cache_scan  jetbrains_cache_scan  vscode_cache_scan
+    flutter_cache_scan go_cache_scan      rust_cache_scan    ruby_cache_scan
+    java_cache_scan    docker_cache_scan  android_cache_scan
+    imessage_attachments_scan  maintenance_scan  memory_purge_scan
+    app_leftovers_scan
+    orphaned_files_scan
+    large_old_files_scan
+    ios_backups_scan
+    mail_attachments_scan
+    ai_models_scan
+    trash_scan
+)
+MB_MOD_LIST_FNS=(
+    user_caches_list   browser_list      dev_tools_list     system_logs_list   temp_files_list
+    node_cache_list    python_cache_list  jetbrains_cache_list  vscode_cache_list
+    flutter_cache_list go_cache_list      rust_cache_list    ruby_cache_list
+    java_cache_list    docker_cache_list  android_cache_list
+    imessage_attachments_list  maintenance_list  memory_purge_list
+    app_leftovers_list
+    orphaned_files_list
+    large_old_files_list
+    ios_backups_list
+    mail_attachments_list
+    ai_models_list
+    trash_list
+)
+MB_MOD_CLEAN_FNS=(
+    user_caches_clean  browser_clean     dev_tools_clean    system_logs_clean  temp_files_clean
+    node_cache_clean   python_cache_clean  jetbrains_cache_clean  vscode_cache_clean
+    flutter_cache_clean go_cache_clean    rust_cache_clean   ruby_cache_clean
+    java_cache_clean   docker_cache_clean  android_cache_clean
+    imessage_attachments_clean  maintenance_clean  memory_purge_clean
+    app_leftovers_clean
+    orphaned_files_clean
+    large_old_files_clean
+    ios_backups_clean
+    mail_attachments_clean
+    ai_models_clean
+    trash_clean
+)
+MB_MOD_SAFETY=(
+    "safe"  "safe"  "moderate"  "moderate"  "safe"
+    "safe"  "safe"  "moderate"  "safe"
+    "safe"  "safe"  "safe"      "safe"
+    "safe"  "moderate"  "safe"
+    "risky"  "moderate"  "moderate"
+    "moderate"
+    "moderate"
+    "moderate"
+    "risky"
+    "moderate"
+    "risky"
+    "risky"
+)
+# One-liner explaining what happens AFTER deletion (same order as MB_MOD_NAMES).
+MB_MOD_EFFECTS=(
+    "Apps auto-recreate caches on next launch — no data loss"
+    "Browsers re-download page assets — slightly slower first load after clean"
+    "Build tools re-download dependencies on next build — may take extra time"
+    "Old log files removed — recent logs unaffected, no app impact"
+    "Session temp files removed — no app impact, system recreates as needed"
+    "npm/yarn/pnpm re-download packages on next install"
+    "pip/conda/poetry re-download packages on next install"
+    "IDE rebuilds indexes on next open — IntelliJ/GoLand may take a few minutes"
+    "VS Code/Cursor/Windsurf regenerate caches on next launch"
+    "Flutter re-downloads pub packages and rebuilds tool cache on next build"
+    "Go re-downloads modules on next build — network required"
+    "Cargo re-downloads crates on next build — network required"
+    "Bundler/CocoaPods re-download gems on next install"
+    "Gradle re-downloads JARs on next build — first build may be slow"
+    "Docker rebuilds images from scratch — next build may be significantly slower"
+    "Android Studio regenerates cache and SDK indexes on next sync"
+    "Media stays visible in Messages — only the local file copies are removed"
+    "System maintenance tasks — macOS performs these routinely anyway"
+    "Frees inactive RAM — no files deleted, apps may reload data slightly slower"
+    "Leftover preference/support files from uninstalled apps — safe to remove"
+    "Orphaned app support files removed — verify the list before confirming"
+    "Large old files permanently deleted — review the list carefully first"
+    "iPhone/iPad backup permanently deleted — re-backup via Finder if needed"
+    "Email attachments re-downloadable from server; Mail re-caches on next open"
+    "Model files deleted — must be re-downloaded (can be several GB per model)"
+    "Trash permanently emptied — deleted files cannot be recovered"
+)
+
+# Modules marked 1 here are skipped during startup scan (too slow).
+# Their size shows as "—" in the main list; actual size loads when Preview opens.
+MB_MOD_DEFERRED=(
+    0 0 0 0 0   # user_caches browser dev_tools system_logs temp_files
+    0 0 0 0     # node_cache python_cache jetbrains_cache vscode_cache
+    0 0 0 0     # flutter_cache go_cache rust_cache ruby_cache
+    0 0 0       # java_cache docker_cache android_cache
+    0 0 0       # imessage_attachments maintenance memory_purge
+    0           # app_leftovers
+    0           # orphaned_files
+    1           # large_old_files  ← deferred: find across HOME is too slow at startup
+    0           # ios_backups
+    0           # mail_attachments
+    0           # ai_models
+    0           # trash
+)
+
+MB_MOD_SIZES_KB=()
+MB_DRY_RUN=false
+MB_MOD_SELECTED=()
+MB_DISK_USED_KB=0
+MB_DISK_TOTAL_KB=0
+
+export MB_DISK_USED_KB MB_DISK_TOTAL_KB
+
+# ── Scan (parallel) ────────────────────────────────────────────
+_run_scan() {
+    mb_disk_clear_cache
+    local total="${#MB_MOD_NAMES[@]}"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    local progress_dir="$tmpdir/progress"
+    mkdir -p "$progress_dir"
+
+    local i
+    for (( i=0; i<total; i++ )); do
+        local fn="${MB_MOD_SCAN_FNS[$i]}"
+        local name="${MB_MOD_NAMES[$i]}"
+        local label="${MB_MOD_LABELS[$i]}"
+        # Dependency check
+        local req_fn="${name}_requires"
+        if declare -f "$req_fn" &>/dev/null; then
+            local req_cmd; req_cmd=$("$req_fn")
+            if ! command -v "$req_cmd" &>/dev/null; then
+                ( printf '0' > "$tmpdir/$i" )
+                continue
+            fi
+        fi
+        # Skip deferred modules at startup — their scan runs lazily when opened
+        if [[ "${MB_MOD_DEFERRED[$i]:-0}" -eq 1 ]]; then
+            printf '0' > "$tmpdir/$i"
+            continue
+        fi
+        # Run scan. Create a progress file while running.
+        (
+            touch "$progress_dir/$i"
+            "$fn" > "$tmpdir/$i" 2>/dev/null
+            rm -f "$progress_dir/$i"
+        ) < /dev/null &
+    done
+    
+    # Wait for all scans while updating TUI with active modules
+    while true; do
+        local active_count
+        active_count=$(ls "$progress_dir" 2>/dev/null | wc -l)
+        if [[ "$active_count" -eq 0 ]]; then break; fi
+
+        if [[ "${MB_TUI_STATE:-}" == "SCANNING" ]]; then
+            local first_active_idx
+            first_active_idx=$(ls "$progress_dir" 2>/dev/null | head -1)
+            if [[ -n "$first_active_idx" ]]; then
+                mb_tui_render "${MB_MOD_LABELS[$first_active_idx]:-Scanning...}"
+            fi
+        fi
+        sleep 0.2
+    done
+    wait
+
+    MB_MOD_SIZES_KB=()
+    for (( i=0; i<total; i++ )); do
+        local s=0
+        [[ -f "$tmpdir/$i" ]] && s=$(cat "$tmpdir/$i")
+        [[ "$s" =~ ^[0-9]+$ ]] || s=0
+        MB_MOD_SIZES_KB+=("$s")
+    done
+
+    rm -rf "$tmpdir"
+
+    MB_DISK_USED_KB=$(mb_disk_used_kb)
+    MB_DISK_TOTAL_KB=$(mb_disk_total_kb)
+}
+
+# ── Clean engine ───────────────────────────────────────────────
+_run_clean_modules() {
+    local dry_run="${1:-false}"
+    MB_CLEAN_TOTAL=0
+
+    if [[ "$dry_run" != "true" ]]; then
+        mb_undo_session_start
+    fi
+
+    local i
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        MB_CLEAN_FREED[$i]=0
+        if [[ "${MB_MOD_SELECTED[$i]:-0}" -eq 1 ]]; then
+            MB_CLEAN_STATUS[$i]="waiting"
+        else
+            MB_CLEAN_STATUS[$i]="skipped"
+        fi
+    done
+
+    # Draw initial cleaning screen once
+    MB_TUI_STATE="CLEANING"
+    mb_tui_render
+
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        [[ "${MB_MOD_SELECTED[$i]:-0}" -eq 1 ]] || continue
+
+        MB_CLEAN_STATUS[$i]="cleaning"
+        mb_tui_render  # full redraw to show "cleaning..." for this module
+
+        local fn="${MB_MOD_CLEAN_FNS[$i]}"
+        export MB_CURRENT_MODULE="${MB_MOD_NAMES[$i]}"
+        local rfile
+        rfile=$(mktemp)
+
+        # Compute the rendered row: row 4 = first drawn module (skipped ones don't appear)
+        local mod_row=4
+        local _j
+        for (( _j=0; _j<i; _j++ )); do
+            [[ "${MB_CLEAN_STATUS[$_j]:-}" != "skipped" ]] && mod_row=$(( mod_row + 1 ))
+        done
+
+        "$fn" "$dry_run" "$rfile" >/dev/null 2>&1 &
+        local cpid=$!
+        (
+            local cyc=0
+            local frames='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+            while true; do
+                local frame="${frames:$cyc:1}"
+                mb_goto 4 "$mod_row"
+                printf '%s%s%s' "${C_CYAN}" "$frame" "${C_NC}"
+                cyc=$(( (cyc + 1) % 10 ))
+                sleep 0.12
+            done
+        ) &
+        local spin_pid=$!
+
+        wait "$cpid" 2>/dev/null || true
+        kill "$spin_pid" 2>/dev/null || true
+        wait "$spin_pid" 2>/dev/null || true
+
+        local freed=0
+        if [[ -f "$rfile" ]]; then freed=$(cat "$rfile"); fi
+        [[ "$freed" =~ ^[0-9]+$ ]] || freed=0
+        rm -f "$rfile"
+
+        MB_CLEAN_FREED[$i]=$freed
+        MB_CLEAN_STATUS[$i]="done"
+        MB_CLEAN_TOTAL=$(( MB_CLEAN_TOTAL + freed ))
+        mb_tui_render  # redraw to show "done ✓" for this module
+    done
+
+    if [[ "$dry_run" != "true" ]]; then
+        mb_undo_session_end
+    fi
+}
+
+# ── JSON backend ───────────────────────────────────────────────
+_json_scan() {
+    _run_scan
+    printf '{\n  "disk": {'
+    printf '"used_kb": %d, "total_kb": %d, "free_kb": %d},\n' \
+        "$MB_DISK_USED_KB" "$MB_DISK_TOTAL_KB" \
+        "$(mb_disk_free_kb)"
+    printf '  "modules": [\n'
+    local i total="${#MB_MOD_NAMES[@]}"
+    for (( i=0; i<total; i++ )); do
+        printf '    {"id": "%s", "label": "%s", "size_kb": %d}' \
+            "${MB_MOD_NAMES[$i]}" "${MB_MOD_LABELS[$i]}" "${MB_MOD_SIZES_KB[$i]:-0}"
+        (( i < total-1 )) && printf ','
+        printf '\n'
+    done
+    printf '  ]\n}\n'
+}
+
+_json_list() {
+    local mod="$1"
+    local fn="" label="" idx=0 i
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        if [[ "${MB_MOD_NAMES[$i]}" == "$mod" ]]; then
+            fn="${MB_MOD_LIST_FNS[$i]}"
+            label="${MB_MOD_LABELS[$i]}"
+            idx=$i
+            break
+        fi
+    done
+    [[ -z "$fn" ]] && { printf '{"error": "unknown module: %s"}\n' "$mod"; return 1; }
+
+    printf '{"module": "%s", "label": "%s", "items": [\n' "$mod" "$label"
+    local first=true
+    local line sk rest slabel
+    while IFS= read -r line; do
+        sk="${line%%|*}"
+        rest="${line#*|}"
+        slabel="${rest%%|*}"
+        [[ "$first" == "true" ]] && first=false || printf ',\n'
+        printf '  {"label": "%s", "size_kb": %d}' "$slabel" "$sk"
+    done < <("$fn" 2>/dev/null)
+    printf '\n]}\n'
+}
+
+# ── Preview: clean only selected items ────────────────────────
+_run_clean_preview_selected() {
+    local dry_run="${MB_DRY_RUN:-false}"
+    local i
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        MB_CLEAN_FREED[$i]=0
+        if [[ "${MB_MOD_NAMES[$i]}" == "$MB_PREVIEW_MOD" ]]; then
+            MB_MOD_SELECTED[$i]=1
+            MB_CLEAN_STATUS[$i]="cleaning"
+        else
+            MB_MOD_SELECTED[$i]=0
+            MB_CLEAN_STATUS[$i]="skipped"
+        fi
+    done
+    MB_CLEAN_TOTAL=0
+    MB_TUI_STATE="CLEANING"
+    mb_tui_render
+
+    export MB_CURRENT_MODULE="$MB_PREVIEW_MOD"
+    [[ "$dry_run" != "true" ]] && mb_undo_session_start
+    local freed=0
+    for (( i=0; i<${#MB_PREVIEW_ITEMS[@]}; i++ )); do
+        [[ "${MB_PREVIEW_SELECTED[$i]:-0}" -eq 1 ]] || continue
+        local item="${MB_PREVIEW_ITEMS[$i]}"
+        local spath="${item##*|}"
+        local s
+        s=$(mb_size_kb "$spath")
+        if [[ "$dry_run" == "true" ]]; then
+            freed=$(( freed + s ))
+        else
+            if mb_safe_rm "$spath"; then
+                freed=$(( freed + s ))
+            fi
+        fi
+    done
+    [[ "$dry_run" != "true" ]] && mb_undo_session_end
+
+    local mod_idx=0
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        if [[ "${MB_MOD_NAMES[$i]}" == "$MB_PREVIEW_MOD" ]]; then mod_idx=$i; break; fi
+    done
+    MB_CLEAN_FREED[$mod_idx]=$freed
+    MB_CLEAN_STATUS[$mod_idx]="done"
+    MB_CLEAN_TOTAL=$freed
+}
+
+# ── Preview loader ─────────────────────────────────────────────
+_load_preview() {
+    local mod="$1"
+    MB_PREVIEW_LOADING=true
+    MB_PREVIEW_ITEMS=()
+    MB_PREVIEW_SELECTED=()
+    MB_PREVIEW_CURSOR=0
+    MB_PREVIEW_SCROLL=0
+    MB_PREVIEW_FILTER=""
+    MB_PREVIEW_FILTER_MODE=false
+    MB_PREVIEW_DRILL_STACK=()
+    MB_PREVIEW_DRILL_DEPTH=0
+    mb_tui_render
+
+    local fn="" i
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        if [[ "${MB_MOD_NAMES[$i]}" == "$mod" ]]; then fn="${MB_MOD_LIST_FNS[$i]}"; break; fi
+    done
+
+    local tmpfile
+    tmpfile=$(mktemp)
+    ( "$fn" > "$tmpfile" 2>/dev/null ) &
+    local lpid=$!
+
+    while kill -0 "$lpid" 2>/dev/null; do
+        mb_tui_render  # animate spinner
+        sleep 0.1
+    done
+    wait "$lpid" 2>/dev/null || true
+
+    MB_PREVIEW_ITEMS=()
+    local line
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && MB_PREVIEW_ITEMS+=("$line")
+    done < "$tmpfile"
+    rm -f "$tmpfile"
+
+    # Find the module index once — used for pre-selection and deferred size update.
+    local _pidx=0 _pi
+    for (( _pi=0; _pi<${#MB_MOD_NAMES[@]}; _pi++ )); do
+        [[ "${MB_MOD_NAMES[$_pi]}" == "$mod" ]] && { _pidx=$_pi; break; }
+    done
+
+    # If this module is already selected on the main screen (●), pre-select all items.
+    if [[ "${MB_MOD_SELECTED[$_pidx]:-0}" -eq 1 ]]; then
+        for (( _pi=0; _pi<${#MB_PREVIEW_ITEMS[@]}; _pi++ )); do
+            MB_PREVIEW_SELECTED[$_pi]=1
+        done
+    fi
+
+    # For deferred modules, sum item sizes now so the main screen shows the real
+    # size (instead of —) when the user returns from Preview.
+    if [[ "${MB_MOD_DEFERRED[$_pidx]:-0}" -eq 1 ]]; then
+        local _deferred_total=0 _item_sz
+        for (( _pi=0; _pi<${#MB_PREVIEW_ITEMS[@]}; _pi++ )); do
+            _item_sz=$(printf '%s' "${MB_PREVIEW_ITEMS[$_pi]}" | cut -d'|' -f1)
+            [[ "$_item_sz" =~ ^[0-9]+$ ]] && _deferred_total=$(( _deferred_total + _item_sz ))
+        done
+        MB_MOD_SIZES_KB[$_pidx]=$_deferred_total
+    fi
+
+    MB_PREVIEW_LOADING=false
+}
+
+# ── TUI main loop ──────────────────────────────────────────────
+_tui_main() {
+    # Disable exit-on-error and exit-on-unbound-variable for the TUI session.
+    # Arithmetic expressions legitimately return non-zero, and sparse array
+    # accesses return empty strings — both are safe in this context.
+    set +eu
+
+    # Init selection and scroll
+    local i
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        MB_MOD_SELECTED[$i]=0
+    done
+    MB_SCROLL=0
+    MB_CURSOR=0
+
+    MB_TUI_STATE="SCANNING"
+    tput smcup  2>/dev/null || true
+    tput civis  2>/dev/null || true
+
+    trap 'mb_tui_cleanup; exit 0' INT TERM EXIT
+    trap 'mb_tui_on_resize' WINCH
+
+    mb_update_term_size
+
+    # Save terminal settings once; restored by mb_tui_cleanup on exit.
+    _MB_STTY_SAVE=$(stty -g 2>/dev/null) || true
+
+    _run_scan
+
+    # After parallel scan, restore terminal and set raw mode for key reading.
+    # Background scan jobs may have altered stty settings even with < /dev/null.
+    if [[ -n "$_MB_STTY_SAVE" ]]; then
+        stty "$_MB_STTY_SAVE" 2>/dev/null || true
+    fi
+    stty -echo -icanon min 1 time 0 2>/dev/null || true
+
+    # Cache APFS purgeable info once (avoid running diskutil on every render)
+    _MB_APFS_PURGEABLE=$(diskutil apfs list 2>/dev/null | \
+        awk '/Purgeable/ {match($0, /[0-9.]+ [KMGT]B/); if (RSTART) print substr($0, RSTART, RLENGTH)}' | \
+        head -1 2>/dev/null) || true
+    export _MB_APFS_PURGEABLE
+
+    MB_TUI_STATE="MAIN"
+
+    # ── Main event loop ────────────────────────────────────────
+    while true; do
+        mb_tui_render
+        mb_read_key
+        local key="$MB_LAST_KEY"
+
+        if [[ "$key" == "EOF" ]]; then
+            # If we get EOF, we are likely in a non-interactive shell.
+            # Sleep to prevent a tight CPU loop.
+            sleep 1
+            continue
+        fi
+
+        case "$MB_TUI_STATE" in
+
+            # ── MAIN screen ──────────────────────────────────
+            MAIN)
+                local total="${#MB_MOD_NAMES[@]}"
+                case "$key" in
+                    $'\x1b[A'|$'\x1bOA'|k|K)   # Up
+                        if (( MB_CURSOR > 0 )); then
+                            MB_CURSOR=$(( MB_CURSOR - 1 ))
+                        fi
+                        if (( MB_CURSOR < MB_SCROLL )); then
+                            MB_SCROLL=$MB_CURSOR
+                        fi
+                        ;;
+                    $'\x1b[B'|$'\x1bOB'|j|J)   # Down
+                        if (( MB_CURSOR < total - 1 )); then
+                            MB_CURSOR=$(( MB_CURSOR + 1 ))
+                        fi
+                        local _vis=$(( _MB_LIST_ROWS > 0 ? _MB_LIST_ROWS : 15 ))
+                        if (( MB_CURSOR >= MB_SCROLL + _vis )); then
+                            MB_SCROLL=$(( MB_CURSOR - _vis + 1 ))
+                        fi
+                        ;;
+                    ' ')             # Space – toggle
+                        if [[ "${MB_MOD_SELECTED[$MB_CURSOR]:-0}" -eq 1 ]]; then
+                            MB_MOD_SELECTED[$MB_CURSOR]=0
+                        else
+                            MB_MOD_SELECTED[$MB_CURSOR]=1
+                        fi
+                        ;;
+                    $'\x1b[C'|$'\x1bOC'|l|L)  # Right arrow – preview
+                        MB_PREVIEW_MOD="${MB_MOD_NAMES[$MB_CURSOR]}"
+                        MB_TUI_STATE="PREVIEW"
+                        _load_preview "$MB_PREVIEW_MOD"
+                        ;;
+                    a|A)             # Select all — skip risky modules
+                        for (( i=0; i<total; i++ )); do
+                            [[ "${MB_MOD_SAFETY[$i]:-safe}" == "risky" ]] && continue
+                            MB_MOD_SELECTED[$i]=1
+                        done
+                        ;;
+                    n|N)             # Deselect all
+                        for (( i=0; i<total; i++ )); do MB_MOD_SELECTED[$i]=0; done
+                        ;;
+                    d|D)  # Dry run toggle
+                        if [[ "$MB_DRY_RUN" == "true" ]]; then
+                            MB_DRY_RUN=false
+                        else
+                            MB_DRY_RUN=true
+                        fi
+                        ;;
+                    $'\n'|$'\r')  # Enter – start cleaning
+                        local any=0
+                        for (( i=0; i<total; i++ )); do
+                            if [[ "${MB_MOD_SELECTED[$i]:-0}" -eq 1 ]]; then any=1; break; fi
+                        done
+                        if [[ "$any" -eq 1 ]]; then
+                            MB_TUI_STATE="CLEANING"
+                            _run_clean_modules "$MB_DRY_RUN"
+                            MB_TUI_STATE="DONE"
+                        fi
+                        ;;
+                    q|Q)
+                        trap - INT TERM EXIT WINCH
+                        mb_tui_cleanup
+                        exit 0
+                        ;;
+                esac
+                ;;
+
+            # ── PREVIEW screen ────────────────────────────────
+            PREVIEW)
+                local total_items="${#MB_PREVIEW_ITEMS[@]}"
+                # Use the list_rows computed by _render_preview so scroll bounds match exactly.
+                local vis_rows="${_MB_PREVIEW_LIST_ROWS:-10}"
+                if [[ $vis_rows -lt 3 ]]; then vis_rows=3; fi
+
+                # Pre-calculate filtered indices for consistent interaction
+                local filtered_indices=()
+                local _idx
+                for (( _idx=0; _idx<total_items; _idx++ )); do
+                    local _item="${MB_PREVIEW_ITEMS[$_idx]}"
+                    local _rest="${_item#*|}"
+                    local _slabel="${_rest%%|*}"
+                    if [[ -z "$MB_PREVIEW_FILTER" ]] || [[ "${_slabel,,}" == *"${MB_PREVIEW_FILTER,,}"* ]]; then
+                        filtered_indices+=("$_idx")
+                    fi
+                done
+                local num_filtered="${#filtered_indices[@]}"
+
+                case "$key" in
+                    $'\x1b[A'|$'\x1bOA'|k|K)   # Up
+                        if (( MB_PREVIEW_CURSOR > 0 )); then
+                            MB_PREVIEW_CURSOR=$(( MB_PREVIEW_CURSOR - 1 ))
+                        fi
+                        if (( MB_PREVIEW_CURSOR < MB_PREVIEW_SCROLL )); then
+                            MB_PREVIEW_SCROLL=$MB_PREVIEW_CURSOR
+                        fi
+                        ;;
+                    $'\x1b[B'|$'\x1bOB'|j|J)   # Down
+                        if (( MB_PREVIEW_CURSOR < num_filtered - 1 )); then
+                            MB_PREVIEW_CURSOR=$(( MB_PREVIEW_CURSOR + 1 ))
+                        fi
+                        if (( MB_PREVIEW_CURSOR >= MB_PREVIEW_SCROLL + vis_rows )); then
+                            MB_PREVIEW_SCROLL=$(( MB_PREVIEW_CURSOR - vis_rows + 1 ))
+                        fi
+                        ;;
+                    ' ')             # Toggle item
+                        if [[ "$num_filtered" -gt 0 ]]; then
+                            local real_idx="${filtered_indices[$MB_PREVIEW_CURSOR]}"
+                            if [[ "${MB_PREVIEW_SELECTED[$real_idx]:-0}" -eq 1 ]]; then
+                                MB_PREVIEW_SELECTED[$real_idx]=0
+                            else
+                                MB_PREVIEW_SELECTED[$real_idx]=1
+                            fi
+                        fi
+                        ;;
+                    a|A)             # Select all items
+                        for (( i=0; i<num_filtered; i++ )); do 
+                            local real_idx="${filtered_indices[$i]}"
+                            MB_PREVIEW_SELECTED[$real_idx]=1
+                        done
+                        ;;
+                    n|N)             # Deselect all items
+                        for (( i=0; i<num_filtered; i++ )); do 
+                            local real_idx="${filtered_indices[$i]}"
+                            MB_PREVIEW_SELECTED[$real_idx]=0
+                        done
+                        ;;
+                    $'\x1b[D'|$'\x1bOD'|h|H)  # Left arrow / h — go back
+                        if (( MB_PREVIEW_DRILL_DEPTH > 0 )); then
+                            # Exit one level of drill-down
+                            MB_PREVIEW_DRILL_STACK=("${MB_PREVIEW_DRILL_STACK[@]:0:$(( ${#MB_PREVIEW_DRILL_STACK[@]} - 1 ))}")
+                            MB_PREVIEW_DRILL_DEPTH=$(( MB_PREVIEW_DRILL_DEPTH - 1 ))
+                            if (( MB_PREVIEW_DRILL_DEPTH == 0 )); then
+                                _load_preview "$MB_PREVIEW_MOD"
+                            else
+                                local _parent="${MB_PREVIEW_DRILL_STACK[-1]}"
+                                MB_PREVIEW_ITEMS=()
+                                MB_PREVIEW_SELECTED=()
+                                MB_PREVIEW_CURSOR=0
+                                MB_PREVIEW_SCROLL=0
+                                local _ptmp; _ptmp=$(mktemp)
+                                (
+                                    find "$_parent" -maxdepth 1 -mindepth 1 -print0 2>/dev/null | \
+                                    while IFS= read -r -d '' _pi; do
+                                        local _ps; _ps=$(du -sk -- "$_pi" 2>/dev/null | awk '{print $1+0; exit}')
+                                        printf '%d|%s|%s\n' "${_ps:-0}" "$(basename "$_pi")" "$_pi"
+                                    done | sort -t'|' -k1 -rn
+                                ) > "$_ptmp" 2>/dev/null
+                                while IFS= read -r _pl; do
+                                    [[ -n "$_pl" ]] && MB_PREVIEW_ITEMS+=("$_pl")
+                                done < "$_ptmp"
+                                rm -f "$_ptmp"
+                            fi
+                        else
+                            MB_TUI_STATE="MAIN"
+                        fi
+                        ;;
+                    '/')             # Open search/filter mode
+                        MB_PREVIEW_FILTER_MODE=true
+                        MB_PREVIEW_FILTER=""
+                        MB_PREVIEW_SCROLL=0
+                        MB_PREVIEW_CURSOR=0
+                        ;;
+                    $'\x1b')         # Escape — clear filter or go back
+                        if [[ "$MB_PREVIEW_FILTER_MODE" == "true" ]] || [[ -n "$MB_PREVIEW_FILTER" ]]; then
+                            MB_PREVIEW_FILTER_MODE=false
+                            MB_PREVIEW_FILTER=""
+                            MB_PREVIEW_SCROLL=0
+                            MB_PREVIEW_CURSOR=0
+                        else
+                            MB_TUI_STATE="MAIN"
+                        fi
+                        ;;
+                    $'\n'|$'\r')  # Enter
+                        # Check for drill-down: is the cursor on an unchecked directory?
+                        if [[ "$num_filtered" -gt 0 ]]; then
+                            local real_idx="${filtered_indices[$MB_PREVIEW_CURSOR]}"
+                            local _cur_item="${MB_PREVIEW_ITEMS[$real_idx]:-}"
+                            local _cur_path="${_cur_item##*|}"
+                            if [[ -d "$_cur_path" ]] && \
+                               [[ "${MB_PREVIEW_SELECTED[$real_idx]:-0}" -eq 0 ]]; then
+                                # Drill-down: enter this directory
+                                MB_PREVIEW_DRILL_STACK+=("$_cur_path")
+                                MB_PREVIEW_DRILL_DEPTH=$(( MB_PREVIEW_DRILL_DEPTH + 1 ))
+                                # List the directory contents
+                                MB_PREVIEW_LOADING=true
+                                MB_PREVIEW_ITEMS=()
+                                MB_PREVIEW_SELECTED=()
+                                MB_PREVIEW_CURSOR=0
+                                MB_PREVIEW_SCROLL=0
+                                local _drill_tmp; _drill_tmp=$(mktemp)
+                                (
+                                    find "$_cur_path" -maxdepth 1 -mindepth 1 -print0 2>/dev/null | \
+                                    while IFS= read -r -d '' _di; do
+                                        local _ds; _ds=$(du -sk -- "$_di" 2>/dev/null | awk '{print $1+0; exit}')
+                                        printf '%d|%s|%s\n' "${_ds:-0}" "$(basename "$_di")" "$_di"
+                                    done | sort -t'|' -k1 -rn
+                                ) > "$_drill_tmp" 2>/dev/null
+                                while IFS= read -r _dl; do
+                                    [[ -n "$_dl" ]] && MB_PREVIEW_ITEMS+=("$_dl")
+                                done < "$_drill_tmp"
+                                rm -f "$_drill_tmp"
+                                MB_PREVIEW_LOADING=false
+                                continue
+                            fi
+                        fi
+                        local any=0
+                        for (( i=0; i<total_items; i++ )); do
+                            if [[ "${MB_PREVIEW_SELECTED[$i]:-0}" -eq 1 ]]; then any=1; break; fi
+                        done
+                        if [[ "$any" -eq 1 ]]; then
+                            _run_clean_preview_selected
+                            MB_TUI_STATE="DONE"
+                        fi
+                        ;;
+                    *)
+                        if [[ "$MB_PREVIEW_FILTER_MODE" == "true" ]]; then
+                            if [[ "$key" == $'\x7f' ]] || [[ "$key" == $'\x08' ]]; then
+                                # Backspace
+                                [[ ${#MB_PREVIEW_FILTER} -gt 0 ]] && \
+                                    MB_PREVIEW_FILTER="${MB_PREVIEW_FILTER%?}"
+                            elif [[ ${#key} -eq 1 ]] && [[ "$key" =~ [[:print:]] ]]; then
+                                MB_PREVIEW_FILTER+="$key"
+                            fi
+                            MB_PREVIEW_SCROLL=0
+                            MB_PREVIEW_CURSOR=0
+                        fi
+                        ;;
+                    q|Q)
+                        trap - INT TERM EXIT WINCH
+                        mb_tui_cleanup
+                        exit 0
+                        ;;
+                esac
+                ;;
+
+            # ── DONE screen ────────────────────────────────────
+            DONE)
+                if [[ "$key" == 'q' || "$key" == 'Q' ]]; then
+                    trap - INT TERM EXIT WINCH
+                    mb_tui_cleanup
+                    exit 0
+                fi
+                MB_TUI_STATE="SCANNING"
+                mb_tui_render
+                _run_scan
+                MB_TUI_STATE="MAIN"
+                ;;
+        esac
+    done
+}
+
+# ── CLI: non-interactive scan report ──────────────────────────
+_cmd_scan() {
+    local use_json=false
+    [[ "${1:-}" == "--json" ]] && use_json=true
+
+    if [[ "$use_json" == "true" ]]; then
+        _json_scan
+        return
+    fi
+
+    # Pretty scan report
+    local bar_w=20
+
+    if [[ -t 1 ]]; then
+        local pid
+        (while true; do
+            printf "\r  ${C_CYAN}⠋${C_NC}  Scanning..."; sleep 0.1
+            printf "\r  ${C_CYAN}⠙${C_NC}  Scanning..."; sleep 0.1
+        done) &
+        pid=$!
+        _run_scan
+        kill "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+        printf "\r\033[2K"
+    else
+        _run_scan
+    fi
+
+    printf "\n"
+    mb_bold "  MacBroom  –  Scan Report"
+    printf "\n"
+
+    local disk_pct=0
+    if (( MB_DISK_TOTAL_KB > 0 )); then
+        disk_pct=$(( MB_DISK_USED_KB * 100 / MB_DISK_TOTAL_KB ))
+    fi
+    local disk_bar; disk_bar=$(mb_size_bar "$disk_pct" "$bar_w")
+    printf "  ${C_DIM}Disk${C_NC}  %b  %s / %s  (%d%% used)\n\n" \
+        "$disk_bar" \
+        "$(mb_format_kb "$MB_DISK_USED_KB")" \
+        "$(mb_format_kb "$MB_DISK_TOTAL_KB")" \
+        "$disk_pct"
+
+    local max_kb=1 i s
+    for (( i=0; i<${#MB_MOD_SIZES_KB[@]}; i++ )); do
+        s="${MB_MOD_SIZES_KB[$i]:-0}"
+        (( s > max_kb )) && max_kb=$s
+    done
+
+    printf "  ${C_DIM}%-26s  %-${bar_w}s  %10s${C_NC}\n" "Category" "" "Size"
+
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        local pct=0
+        s="${MB_MOD_SIZES_KB[$i]:-0}"
+        (( max_kb > 0 )) && pct=$(( s * 100 / max_kb ))
+        local bar; bar=$(mb_size_bar "$pct" "$bar_w")
+        printf "  %-26s  %b  %10s\n" \
+            "${MB_MOD_LABELS[$i]}" "$bar" "$(mb_format_kb "$s")"
+    done
+
+    local total_kb=0
+    for (( i=0; i<${#MB_MOD_SIZES_KB[@]}; i++ )); do
+        total_kb=$(( total_kb + ${MB_MOD_SIZES_KB[$i]:-0} ))
+    done
+    printf "\n  ${C_DIM}Total scannable:${C_NC} ${C_BOLD}%s${C_NC}\n\n" "$(mb_format_kb "$total_kb")"
+}
+
+_cmd_list() {
+    local mod="${1:-}"
+    local use_json=false
+    [[ "${2:-}" == "--json" || "${1:-}" == "--json" ]] && use_json=true
+
+    if [[ -z "$mod" || "$mod" == "--json" ]]; then
+        mb_error "Usage: macbroom list <module> [--json]"
+        mb_dim   "Modules: ${MB_MOD_NAMES[*]}"
+        exit 1
+    fi
+
+    # Validate module name
+    local valid=false i
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        if [[ "${MB_MOD_NAMES[$i]}" == "$mod" ]]; then valid=true; break; fi
+    done
+    if [[ "$valid" != "true" ]]; then
+        mb_error "Unknown module: $mod"
+        mb_dim   "Valid modules: ${MB_MOD_NAMES[*]}"
+        exit 1
+    fi
+
+    if [[ "$use_json" == "true" ]]; then
+        _json_list "$mod"
+        return
+    fi
+
+    # Pretty list
+    _run_scan  # need sizes for context
+    local fn="" label="" idx=0
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        if [[ "${MB_MOD_NAMES[$i]}" == "$mod" ]]; then
+            fn="${MB_MOD_LIST_FNS[$i]}"
+            label="${MB_MOD_LABELS[$i]}"
+            idx=$i
+            break
+        fi
+    done
+
+    printf "\n  ${C_BOLD}%s${C_NC}  ${C_DIM}(%s total)${C_NC}\n\n" \
+        "$label" "$(mb_format_kb "${MB_MOD_SIZES_KB[$idx]:-0}")"
+
+    local max_kb=1 line sk slabel
+    local items=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && items+=("$line")
+    done < <("$fn" 2>/dev/null)
+
+    for line in "${items[@]}"; do
+        sk="${line%%|*}"
+        (( sk > max_kb )) && max_kb=$sk
+    done
+
+    local bar_w=16
+    for line in "${items[@]}"; do
+        sk="${line%%|*}"
+        slabel="${line#*|}"
+        local pct=0
+        (( max_kb > 0 )) && pct=$(( sk * 100 / max_kb ))
+        local bar; bar=$(mb_size_bar "$pct" "$bar_w")
+        printf "  %-32s  %b  %10s\n" "$slabel" "$bar" "$(mb_format_kb "$sk")"
+    done
+
+    [[ ${#items[@]} -eq 0 ]] && mb_dim "  (nothing found)"
+    printf "\n"
+}
+
+_cmd_clean() {
+    local dry_run=false
+    local mods_to_clean=()
+    local clean_all=false
+
+    # Parse args
+    local a
+    for a in "$@"; do
+        case "$a" in
+            --dry-run|-n) dry_run=true ;;
+            --all|-a)     clean_all=true ;;
+            -*)           mb_error "Unknown flag: $a"; exit 1 ;;
+            *)            mods_to_clean+=("$a") ;;
+        esac
+    done
+
+    _run_scan
+
+    # Default: clean all if no specific modules given
+    if [[ "$clean_all" == "false" ]] && [[ ${#mods_to_clean[@]} -eq 0 ]]; then
+        clean_all=true
+    fi
+
+    local i
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        MB_MOD_SELECTED[$i]=0
+    done
+
+    if [[ "$clean_all" == "true" ]]; then
+        for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+            MB_MOD_SELECTED[$i]=1
+        done
+    else
+        for m in "${mods_to_clean[@]+"${mods_to_clean[@]}"}"; do
+            local found=false
+            for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+                if [[ "${MB_MOD_NAMES[$i]}" == "$m" ]]; then
+                    MB_MOD_SELECTED[$i]=1
+                    found=true
+                    break
+                fi
+            done
+            if [[ "$found" != "true" ]]; then
+                mb_error "Unknown module: $m"
+                mb_dim   "Valid: ${MB_MOD_NAMES[*]}"
+                exit 1
+            fi
+        done
+    fi
+
+    local any=0
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        if [[ "${MB_MOD_SELECTED[$i]:-0}" -eq 1 ]]; then any=1; break; fi
+    done
+    if [[ "$any" -eq 0 ]]; then mb_error "No modules selected."; exit 1; fi
+
+    printf "\n"
+    mb_bold "  MacBroom – Cleaning"
+    [[ "$dry_run" == "true" ]] && printf "  ${C_YELLOW}(dry run – no files will be deleted)${C_NC}\n"
+    printf "\n"
+
+    local total_freed=0
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        [[ "${MB_MOD_SELECTED[$i]:-0}" -eq 1 ]] || continue
+        local fn="${MB_MOD_CLEAN_FNS[$i]}"
+        local label="${MB_MOD_LABELS[$i]}"
+        printf "  ${C_BOLD}%s${C_NC}\n" "$label"
+        local rfile; rfile=$(mktemp)
+        "$fn" "$dry_run" "$rfile" 2>/dev/null || true
+        local freed=0
+        [[ -f "$rfile" ]] && freed=$(cat "$rfile")
+        [[ "$freed" =~ ^[0-9]+$ ]] || freed=0
+        rm -f "$rfile"
+        total_freed=$(( total_freed + freed ))
+        printf "\n"
+    done
+
+    if [[ "$dry_run" == "true" ]]; then
+        mb_bold "  Dry run complete."
+        mb_dim  "  Would free approximately $(mb_format_kb "$total_freed")"
+    else
+        mb_ok   "Total freed: $(mb_format_kb "$total_freed")"
+    fi
+    printf "\n"
+}
+
+_cmd_headless() {
+    local safety_level="safe"
+    local a
+    for a in "$@"; do
+        case "$a" in
+            --safe)     safety_level="safe" ;;
+            --moderate) safety_level="moderate" ;;
+            --risky)    safety_level="risky" ;;
+        esac
+    done
+
+    _run_scan
+
+    local i
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        local safety="${MB_MOD_SAFETY[$i]:-safe}"
+        case "$safety_level" in
+            safe)     [[ "$safety" == "safe" ]] && MB_MOD_SELECTED[$i]=1 || MB_MOD_SELECTED[$i]=0 ;;
+            moderate) [[ "$safety" == "safe" || "$safety" == "moderate" ]] && MB_MOD_SELECTED[$i]=1 || MB_MOD_SELECTED[$i]=0 ;;
+            risky)    MB_MOD_SELECTED[$i]=1 ;;
+        esac
+    done
+
+    local total_freed=0
+    mb_undo_session_start
+    for (( i=0; i<${#MB_MOD_NAMES[@]}; i++ )); do
+        [[ "${MB_MOD_SELECTED[$i]:-0}" -eq 1 ]] || continue
+        local fn="${MB_MOD_CLEAN_FNS[$i]}"
+        export MB_CURRENT_MODULE="${MB_MOD_NAMES[$i]}"
+        local rfile; rfile=$(mktemp)
+        "$fn" "false" "$rfile" 2>/dev/null || true
+        local freed=0
+        [[ -f "$rfile" ]] && freed=$(cat "$rfile")
+        [[ "$freed" =~ ^[0-9]+$ ]] || freed=0
+        rm -f "$rfile"
+        total_freed=$(( total_freed + freed ))
+    done
+    mb_undo_session_end
+    mb_ok "Headless clean complete — $(mb_format_kb "$total_freed") freed"
+}
+
+# ── Help ───────────────────────────────────────────────────────
+_show_help() {
+    cat <<EOF
+
+  ${C_BOLD}MacBroom${C_NC}  —  Interactive Mac disk cleaner
+
+  ${C_BOLD}Usage:${C_NC}
+    macbroom                         Interactive TUI (default)
+    macbroom scan [--json]           Scan and show report
+    macbroom list <module> [--json]  List items in a category
+    macbroom clean <module...>       Clean specific modules
+    macbroom clean --all             Clean all modules
+    macbroom clean --all --dry-run   Preview what would be deleted
+    macbroom --install-cron [days] [level]   Schedule automatic cleaning
+    macbroom --remove-cron                   Remove scheduled cleaning
+    macbroom --cron-status                   Show schedule status
+    macbroom --log last                      Show what was deleted in the last session
+    macbroom --log list                      List all deletion log sessions
+    macbroom --headless [--safe|--moderate]  Non-interactive clean (for cron)
+    macbroom --version
+    macbroom --help
+
+  ${C_BOLD}Modules:${C_NC}
+    user_caches    dev_tools    temp_files
+    browser        system_logs  trash
+
+  ${C_BOLD}TUI controls:${C_NC}
+    ↑↓            Navigate
+    Space         Toggle selection
+    → / Enter     Open preview / Start cleaning
+    A / N         Select all / Deselect all
+    ← / Esc       Go back
+    Q             Quit
+
+  ${C_BOLD}Environment:${C_NC}
+    MB_LOG_AGE_DAYS           Minimum log age (default: 7)
+    MB_TEMP_AGE_DAYS          Minimum temp file age (default: 3)
+    MB_APP_LEFTOVERS_QUERY    App name to search for leftover files
+
+EOF
+}
+
+# ── Entry point ────────────────────────────────────────────────
+main() {
+    local cmd="${1:-}"
+
+    case "$cmd" in
+        scan)          shift; _cmd_scan "$@" ;;
+        list)          shift; _cmd_list "$@" ;;
+        clean)         shift; _cmd_clean "$@" ;;
+        --dry-run|-n)
+            MB_DRY_RUN=true
+            _tui_main
+            ;;
+        --version|-v)  printf "MacBroom\n" ;;
+        --help|-h)     _show_help ;;
+        --install-cron)
+            shift
+            local days="${1:-7}" level="${2:-safe}"
+            mb_cron_install "$days" "$level"
+            ;;
+        --remove-cron)
+            mb_cron_remove
+            ;;
+        --cron-status)
+            mb_cron_status
+            ;;
+        --log)
+            shift
+            local subcmd="${1:-last}"
+            case "$subcmd" in
+                last) mb_undo_last ;;
+                list) mb_undo_list_sessions ;;
+                *) mb_error "Usage: macbroom --log [last|list]" ;;
+            esac
+            ;;
+        --headless)
+            shift
+            _cmd_headless "$@"
+            ;;
+        "")            _tui_main ;;
+        *)
+            mb_error "Unknown command: $cmd"
+            _show_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
