@@ -75,7 +75,7 @@ Most Mac cleaning apps are closed-source GUI applications. You click a button an
 ## Quick Start
 
 ```bash
-git clone https://github.com/taskineren/MacBroom.git
+git clone https://github.com/AarontheGalaxy/MacBroom.git
 cd MacBroom
 bash macbroom
 ```
@@ -108,7 +108,7 @@ bash install.sh
 ### Option A — Install system-wide (recommended)
 
 ```bash
-git clone https://github.com/taskineren/MacBroom.git
+git clone https://github.com/AarontheGalaxy/MacBroom.git
 cd MacBroom
 bash install.sh
 ```
@@ -1275,7 +1275,7 @@ This cannot happen. The `A` key explicitly skips every module marked `risky` in 
 
 ## License
 
-MIT License. Copyright (c) 2026 taskineren.
+MIT License. Copyright (c) 2026 AarontheGalaxy.
 
 ---
 
