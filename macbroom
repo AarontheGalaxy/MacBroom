@@ -16,7 +16,14 @@
 
 set -u
 
-readonly MB_VERSION="1.0.0"
+# Bash 3.2 is the minimum (ships with macOS). Warn clearly if somehow older.
+if [[ "${BASH_VERSINFO[0]}" -lt 3 ]] || \
+   { [[ "${BASH_VERSINFO[0]}" -eq 3 ]] && [[ "${BASH_VERSINFO[1]}" -lt 2 ]]; }; then
+    printf 'MacBroom requires Bash 3.2 or newer (found %s).\n' "$BASH_VERSION" >&2
+    exit 1
+fi
+
+readonly MB_VERSION="1.1.0"
 readonly MB_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Load libraries ─────────────────────────────────────────────
@@ -521,10 +528,10 @@ _load_preview() {
 
 # ── TUI main loop ──────────────────────────────────────────────
 _tui_main() {
-    # Disable exit-on-error and exit-on-unbound-variable for the TUI session.
-    # Arithmetic expressions legitimately return non-zero, and sparse array
-    # accesses return empty strings — both are safe in this context.
-    set +eu
+    # Arithmetic conditions like (( x > 0 )) exit with status 1 when false,
+    # which would abort the loop under set -e. Disable only exit-on-error;
+    # set -u (unbound variable) stays active to catch typos.
+    set +e
 
     # Init selection and scroll
     local i
@@ -1145,7 +1152,7 @@ main() {
             MB_DRY_RUN=true
             _tui_main
             ;;
-        --version|-v)  printf "MacBroom\n" ;;
+        --version|-v)  printf "MacBroom %s\n" "$MB_VERSION" ;;
         --help|-h)     _show_help ;;
         --install-cron)
             shift

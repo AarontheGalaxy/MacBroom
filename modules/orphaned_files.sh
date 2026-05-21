@@ -9,6 +9,30 @@ _ORPHAN_SEARCH_DIRS=(
     "$HOME/Library/Caches"
 )
 
+# Bundle ID prefixes that belong to macOS system services, background agents,
+# or auto-update frameworks — never installed as user-facing .app bundles.
+# Marking these as orphaned would be a false positive.
+_ORPHAN_SYSTEM_PREFIXES=(
+    "com.apple."
+    "com.google.Keystone"
+    "com.microsoft.autoupdate"
+    "com.adobe.acc"
+    "com.adobe.AdobeCreativeCloud"
+    "com.crashlytics."
+    "io.fabric."
+    "com.bugsnag."
+    "com.sentry."
+)
+
+_is_system_bundle() {
+    local name="$1"
+    local prefix
+    for prefix in "${_ORPHAN_SYSTEM_PREFIXES[@]}"; do
+        [[ "$name" == "$prefix"* ]] && return 0
+    done
+    return 1
+}
+
 _get_installed_bundle_ids() {
     # SPOTLIGHT OPTIMIZATION: Extracting bundle IDs directly from the index.
     # This is much faster than running 'mdls' in a loop for every app.
@@ -42,6 +66,7 @@ orphaned_files_scan() {
         [[ -d "$dir" ]] || continue
         while IFS= read -r -d '' item; do
             local name; name=$(basename "$item")
+            _is_system_bundle "$name" && continue
             # In Caches, only check bundle-style names (com.*, org.*, etc.)
             if [[ "$dir" == *"/Caches"* ]]; then
                 _is_likely_bundle_dir "$name" || continue
@@ -70,6 +95,7 @@ orphaned_files_list() {
         local item s
         while IFS= read -r -d '' item; do
             local name; name=$(basename "$item")
+            _is_system_bundle "$name" && continue
             # In Caches, only check bundle-style names (com.*, org.*, etc.)
             if [[ "$dir" == *"/Caches"* ]]; then
                 _is_likely_bundle_dir "$name" || continue
@@ -102,6 +128,7 @@ orphaned_files_clean() {
         local item s
         while IFS= read -r -d '' item; do
             local name; name=$(basename "$item")
+            _is_system_bundle "$name" && continue
             # In Caches, only check bundle-style names (com.*, org.*, etc.)
             if [[ "$dir" == *"/Caches"* ]]; then
                 _is_likely_bundle_dir "$name" || continue

@@ -181,6 +181,7 @@ mb_is_safe_path() {
     [[ -z "$target" ]] && return 1
 
     # Check against protected paths first
+    local prot
     for prot in "${MB_PROTECTED_PATHS[@]}"; do
         if [[ "$target" == "$prot" || "$target" == "$prot/"* ]]; then
             mb_error "Access Denied: $target is a protected system/config path"
@@ -188,8 +189,26 @@ mb_is_safe_path() {
         fi
     done
 
+    local prefix
     for prefix in "${MB_SAFE_PREFIXES[@]}"; do
-        [[ "$target" == "$prefix" || "$target" == "$prefix/"* ]] && return 0
+        [[ "$target" == "$prefix" || "$target" == "$prefix/"* ]] && {
+            # If the target is a symlink, also validate where it points.
+            # rm -rf on a bare symlink removes only the link, but du/stat can
+            # follow it and reveal unexpected data. Guard against this.
+            if [[ -L "$target" ]]; then
+                local real_target
+                real_target=$(readlink "$target" 2>/dev/null) || return 1
+                # Resolve relative symlinks against the parent directory
+                if [[ "$real_target" != /* ]]; then
+                    real_target="$(dirname "$target")/$real_target"
+                fi
+                mb_is_safe_path "$real_target" || {
+                    mb_warn "Skipping symlink to unsafe target: $target → $real_target"
+                    return 1
+                }
+            fi
+            return 0
+        }
     done
     return 1
 }
