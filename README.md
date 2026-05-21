@@ -395,7 +395,7 @@ Use this when you want to see exactly what's inside a category before deleting, 
 
 ```
   [ ] com.apple.Safari           1.2 GB   ← not selected, will NOT be deleted
-  [✓] com.google.Chrome        340 MB   ← selected, WILL be deleted
+  [✓] com.google.Chrome          340 MB   ← selected, WILL be deleted
   [ ] org.mozilla.firefox        120 MB   ← not selected, will NOT be deleted
 ```
 
