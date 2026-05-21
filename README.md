@@ -5,7 +5,7 @@
 No Homebrew. No Python. No Ruby. No Electron. No installation required beyond cloning the repo.
 
 ```
-  MacBroom  v1.1.0
+  MacBroom  
 ──────────────────────────────────────────────────────────────────────────────
 Disk Usage: ■■■■■■■■■■■■□□□□  892.4 GB / 994.7 GB (90%)
 APFS Purgeable: 12.3 GB
