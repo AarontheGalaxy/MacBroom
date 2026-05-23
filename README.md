@@ -221,7 +221,7 @@ APFS Purgeable: 12.3 GB
 
 | Size color | Meaning |
 | ---------- | ------- |
-| **Bold white** | Cursor is on this row (not selected) |
+| **Bold** | Cursor is on this row (not selected) |
 | **Green** | Selected (`●`) |
 | **Bold green** | Selected AND cursor is on this row |
 | Dim | Not selected, not the cursor |

@@ -429,7 +429,7 @@ _render_preview() {
         [[ "${MB_PREVIEW_SELECTED[$_si]:-0}" -eq 1 ]] && _sel_count=$(( _sel_count + 1 ))
     done
     if [[ "$_sel_count" -eq 0 ]]; then
-        printf " ${C_DIM}← Back  ↑↓ Navigate  ${C_YELLOW}Space${C_NC}${C_DIM} to select — nothing deleted until you select  Q Quit${C_NC}"
+        printf " ${C_DIM}← Back  ↑↓ Navigate  ${C_YELLOW}Space${C_NC}${C_DIM} to select files — nothing deleted until you select  Q Quit${C_NC}"
     else
         printf " ${C_DIM}← Back  ↑↓ Navigate  Space Toggle  / Filter  ${C_GREEN}Enter${C_NC}${C_DIM} Delete ${_sel_count} selected  Q Quit${C_NC}"
     fi
