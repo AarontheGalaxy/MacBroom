@@ -23,7 +23,7 @@ if [[ "${BASH_VERSINFO[0]}" -lt 3 ]] || \
     exit 1
 fi
 
-readonly MB_VERSION="1.1.0"
+readonly MB_VERSION="1.2.0"
 readonly MB_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Load libraries ─────────────────────────────────────────────
@@ -37,6 +37,7 @@ source "$MB_SCRIPT_DIR/lib/cron.sh"
 source "$MB_SCRIPT_DIR/modules/user_caches.sh"
 source "$MB_SCRIPT_DIR/modules/browser.sh"
 source "$MB_SCRIPT_DIR/modules/dev_tools.sh"
+source "$MB_SCRIPT_DIR/modules/project_artifacts.sh"
 source "$MB_SCRIPT_DIR/modules/system_logs.sh"
 source "$MB_SCRIPT_DIR/modules/temp_files.sh"
 source "$MB_SCRIPT_DIR/modules/trash.sh"
@@ -48,6 +49,7 @@ source "$MB_SCRIPT_DIR/modules/flutter_cache.sh"
 source "$MB_SCRIPT_DIR/modules/go_cache.sh"
 source "$MB_SCRIPT_DIR/modules/rust_cache.sh"
 source "$MB_SCRIPT_DIR/modules/ruby_cache.sh"
+source "$MB_SCRIPT_DIR/modules/brew_cache.sh"
 source "$MB_SCRIPT_DIR/modules/java_cache.sh"
 source "$MB_SCRIPT_DIR/modules/docker_cache.sh"
 source "$MB_SCRIPT_DIR/modules/android_cache.sh"
@@ -56,6 +58,7 @@ source "$MB_SCRIPT_DIR/modules/maintenance.sh"
 source "$MB_SCRIPT_DIR/modules/memory_purge.sh"
 source "$MB_SCRIPT_DIR/modules/app_leftovers.sh"
 source "$MB_SCRIPT_DIR/modules/orphaned_files.sh"
+source "$MB_SCRIPT_DIR/modules/installer_files.sh"
 source "$MB_SCRIPT_DIR/modules/large_old_files.sh"
 source "$MB_SCRIPT_DIR/modules/ios_backups.sh"
 source "$MB_SCRIPT_DIR/modules/mail_attachments.sh"
@@ -63,13 +66,14 @@ source "$MB_SCRIPT_DIR/modules/ai_models.sh"
 
 # ── Module registry ────────────────────────────────────────────
 MB_MOD_NAMES=(
-    user_caches  browser     dev_tools               system_logs       temp_files
+    user_caches  browser     dev_tools  project_artifacts  system_logs  temp_files
     node_cache        python_cache        jetbrains_cache        vscode_cache
     flutter_cache     go_cache            rust_cache             ruby_cache
-    java_cache        docker_cache        android_cache
+    brew_cache        java_cache          docker_cache        android_cache
     imessage_attachments  maintenance  memory_purge
     app_leftovers
     orphaned_files
+    installer_files
     large_old_files
     ios_backups
     mail_attachments
@@ -77,13 +81,15 @@ MB_MOD_NAMES=(
     trash
 )
 MB_MOD_LABELS=(
-    "User App Caches"  "Browser Caches"  "Developer Tool Caches"  "System & App Logs"  "Temp Files"
+    "User App Caches"  "Browser Caches"  "Developer Tool Caches"  "Project Artifacts"  "System & App Logs"  "Temp Files"
     "Node.js & JS Caches"    "Python & pip Caches"    "JetBrains IDE Caches"    "VS Code Caches"
     "Flutter & Dart Caches"  "Go Module Cache"         "Rust & Cargo Cache"      "Ruby & CocoaPods Cache"
+    "Homebrew Cache"
     "Java & Gradle Cache"    "Docker Build Cache"      "Android SDK Cache"
     "iMessage Attachments"  "Maintenance Tasks"  "Memory Purge"
     "App Leftovers"
     "Orphaned App Files"
+    "Installer Files"
     "Large Old Files"
     "iOS Backups"
     "Mail Attachments"
@@ -94,6 +100,7 @@ MB_MOD_DESCS=(
     "Application cache directories in ~/Library/Caches"
     "Cache directories for Safari, Chrome, Firefox, and other browsers"
     "Build artifacts and caches for Xcode, npm, Gradle, pip, Cargo, and more"
+    "node_modules, __pycache__, .next, .build and other artifact dirs across your projects"
     "Log files and crash reports in ~/Library/Logs older than ${MB_LOG_AGE_DAYS:-7} days"
     "Temporary files in /private/tmp and /private/var/tmp older than ${MB_TEMP_AGE_DAYS:-3} days"
     "npm, yarn, pnpm, bun, and node-gyp cache directories"
@@ -104,6 +111,7 @@ MB_MOD_DESCS=(
     "Go module download cache and build cache"
     "Cargo registry cache and git database"
     "Ruby gem cache and CocoaPods cache"
+    "Homebrew download cache, old formula versions, and unused dependencies"
     "Gradle caches and daemon files"
     "Docker builder cache and dangling images"
     "Android SDK temporary files and cache"
@@ -112,6 +120,7 @@ MB_MOD_DESCS=(
     "Purge inactive memory pages to free up RAM (not disk space)"
     "Leftover files from uninstalled apps — set MB_APP_LEFTOVERS_QUERY=AppName to search"
     "App support files with no matching installed application"
+    ".dmg, .pkg, and .iso installer files in ~/Downloads older than ${MB_INSTALLER_AGE_DAYS:-14} days"
     "Files over ${MB_LOF_MIN_SIZE_MB:-500} MB not accessed in 180+ days — size shown after opening Preview"
     "iTunes/Finder iPhone and iPad backup folders"
     "Cached email attachments older than 90 days"
@@ -119,13 +128,14 @@ MB_MOD_DESCS=(
     "Contents of ~/.Trash and trash folders on external volumes"
 )
 MB_MOD_SCAN_FNS=(
-    user_caches_scan   browser_scan      dev_tools_scan     system_logs_scan   temp_files_scan
+    user_caches_scan   browser_scan      dev_tools_scan     project_artifacts_scan  system_logs_scan   temp_files_scan
     node_cache_scan    python_cache_scan  jetbrains_cache_scan  vscode_cache_scan
     flutter_cache_scan go_cache_scan      rust_cache_scan    ruby_cache_scan
-    java_cache_scan    docker_cache_scan  android_cache_scan
+    brew_cache_scan    java_cache_scan    docker_cache_scan  android_cache_scan
     imessage_attachments_scan  maintenance_scan  memory_purge_scan
     app_leftovers_scan
     orphaned_files_scan
+    installer_files_scan
     large_old_files_scan
     ios_backups_scan
     mail_attachments_scan
@@ -133,13 +143,14 @@ MB_MOD_SCAN_FNS=(
     trash_scan
 )
 MB_MOD_LIST_FNS=(
-    user_caches_list   browser_list      dev_tools_list     system_logs_list   temp_files_list
+    user_caches_list   browser_list      dev_tools_list     project_artifacts_list  system_logs_list   temp_files_list
     node_cache_list    python_cache_list  jetbrains_cache_list  vscode_cache_list
     flutter_cache_list go_cache_list      rust_cache_list    ruby_cache_list
-    java_cache_list    docker_cache_list  android_cache_list
+    brew_cache_list    java_cache_list    docker_cache_list  android_cache_list
     imessage_attachments_list  maintenance_list  memory_purge_list
     app_leftovers_list
     orphaned_files_list
+    installer_files_list
     large_old_files_list
     ios_backups_list
     mail_attachments_list
@@ -147,13 +158,14 @@ MB_MOD_LIST_FNS=(
     trash_list
 )
 MB_MOD_CLEAN_FNS=(
-    user_caches_clean  browser_clean     dev_tools_clean    system_logs_clean  temp_files_clean
+    user_caches_clean  browser_clean     dev_tools_clean    project_artifacts_clean  system_logs_clean  temp_files_clean
     node_cache_clean   python_cache_clean  jetbrains_cache_clean  vscode_cache_clean
     flutter_cache_clean go_cache_clean    rust_cache_clean   ruby_cache_clean
-    java_cache_clean   docker_cache_clean  android_cache_clean
+    brew_cache_clean   java_cache_clean   docker_cache_clean  android_cache_clean
     imessage_attachments_clean  maintenance_clean  memory_purge_clean
     app_leftovers_clean
     orphaned_files_clean
+    installer_files_clean
     large_old_files_clean
     ios_backups_clean
     mail_attachments_clean
@@ -161,13 +173,14 @@ MB_MOD_CLEAN_FNS=(
     trash_clean
 )
 MB_MOD_SAFETY=(
-    "safe"  "safe"  "moderate"  "moderate"  "safe"
+    "safe"  "safe"  "moderate"  "safe"  "moderate"  "safe"
     "safe"  "safe"  "moderate"  "safe"
     "safe"  "safe"  "safe"      "safe"
-    "safe"  "moderate"  "safe"
+    "safe"  "safe"  "moderate"  "safe"
     "risky"  "moderate"  "moderate"
     "moderate"
     "moderate"
+    "safe"
     "moderate"
     "risky"
     "moderate"
@@ -179,6 +192,7 @@ MB_MOD_EFFECTS=(
     "Apps auto-recreate caches on next launch — no data loss"
     "Browsers re-download page assets — slightly slower first load after clean"
     "Build tools re-download dependencies on next build — may take extra time"
+    "Build tools regenerate artifact dirs on next build — source code is never touched"
     "Old log files removed — recent logs unaffected, no app impact"
     "Session temp files removed — no app impact, system recreates as needed"
     "npm/yarn/pnpm re-download packages on next install"
@@ -189,6 +203,7 @@ MB_MOD_EFFECTS=(
     "Go re-downloads modules on next build — network required"
     "Cargo re-downloads crates on next build — network required"
     "Bundler/CocoaPods re-download gems on next install"
+    "Homebrew re-downloads formulae on next install — brew autoremove may uninstall unused packages"
     "Gradle re-downloads JARs on next build — first build may be slow"
     "Docker rebuilds images from scratch — next build may be significantly slower"
     "Android Studio regenerates cache and SDK indexes on next sync"
@@ -197,6 +212,7 @@ MB_MOD_EFFECTS=(
     "Frees inactive RAM — no files deleted, apps may reload data slightly slower"
     "Leftover preference/support files from uninstalled apps — safe to remove"
     "Orphaned app support files removed — verify the list before confirming"
+    "Installer images deleted — re-download from the app's website if needed"
     "Large old files permanently deleted — review the list carefully first"
     "iPhone/iPad backup permanently deleted — re-backup via Finder if needed"
     "Email attachments re-downloadable from server; Mail re-caches on next open"
@@ -207,19 +223,22 @@ MB_MOD_EFFECTS=(
 # Modules marked 1 here are skipped during startup scan (too slow).
 # Their size shows as "—" in the main list; actual size loads when Preview opens.
 MB_MOD_DEFERRED=(
-    0 0 0 0 0   # user_caches browser dev_tools system_logs temp_files
+    0 0 0 1 0 0 # user_caches browser dev_tools project_artifacts system_logs temp_files
     0 0 0 0     # node_cache python_cache jetbrains_cache vscode_cache
     0 0 0 0     # flutter_cache go_cache rust_cache ruby_cache
-    0 0 0       # java_cache docker_cache android_cache
+    0 0 0 0     # brew_cache java_cache docker_cache android_cache
     0 0 0       # imessage_attachments maintenance memory_purge
     0           # app_leftovers
     0           # orphaned_files
+    0           # installer_files
     1           # large_old_files  ← deferred: find across HOME is too slow at startup
     0           # ios_backups
     0           # mail_attachments
     0           # ai_models
     0           # trash
 )
+
+mb_whitelist_load
 
 MB_MOD_SIZES_KB=()
 MB_DRY_RUN=false
@@ -627,6 +646,18 @@ _tui_main() {
                     n|N)             # Deselect all
                         for (( i=0; i<total; i++ )); do MB_MOD_SELECTED[$i]=0; done
                         ;;
+                    w|W)  # Whitelist manager
+                        MB_WL_CURSOR=0
+                        MB_WL_SCROLL=0
+                        MB_WL_INPUT=""
+                        MB_WL_INPUT_MODE=false
+                        MB_TUI_STATE="WHITELIST"
+                        ;;
+                    s|S)  # System status
+                        MB_TUI_STATE="STATUS"
+                        mb_tui_render   # show "loading..." frame first
+                        mb_collect_status
+                        ;;
                     d|D)  # Dry run toggle
                         if [[ "$MB_DRY_RUN" == "true" ]]; then
                             MB_DRY_RUN=false
@@ -817,6 +848,80 @@ _tui_main() {
                         trap - INT TERM EXIT WINCH
                         mb_tui_cleanup
                         exit 0
+                        ;;
+                esac
+                ;;
+
+            # ── WHITELIST screen ───────────────────────────────
+            WHITELIST)
+                local wl_n="${#MB_WHITELIST[@]}"
+                if [[ "$MB_WL_INPUT_MODE" == "true" ]]; then
+                    case "$key" in
+                        $'\n'|$'\r')
+                            if [[ -n "$MB_WL_INPUT" ]]; then
+                                mb_whitelist_add "$MB_WL_INPUT"
+                            fi
+                            MB_WL_INPUT=""
+                            MB_WL_INPUT_MODE=false
+                            ;;
+                        $'\x1b')
+                            MB_WL_INPUT=""
+                            MB_WL_INPUT_MODE=false
+                            ;;
+                        $'\x7f'|$'\x08')
+                            [[ ${#MB_WL_INPUT} -gt 0 ]] && MB_WL_INPUT="${MB_WL_INPUT%?}"
+                            ;;
+                        *)
+                            if [[ ${#key} -eq 1 ]] && [[ "$key" =~ [[:print:]] ]]; then
+                                MB_WL_INPUT+="$key"
+                            fi
+                            ;;
+                    esac
+                else
+                    case "$key" in
+                        $'\x1b[A'|$'\x1bOA'|k|K)
+                            if (( MB_WL_CURSOR > 0 )); then
+                                MB_WL_CURSOR=$(( MB_WL_CURSOR - 1 ))
+                                if (( MB_WL_CURSOR < MB_WL_SCROLL )); then MB_WL_SCROLL=$MB_WL_CURSOR; fi
+                            fi
+                            ;;
+                        $'\x1b[B'|$'\x1bOB'|j|J)
+                            if (( wl_n > 0 && MB_WL_CURSOR < wl_n - 1 )); then
+                                MB_WL_CURSOR=$(( MB_WL_CURSOR + 1 ))
+                                local _wvis=$(( _MB_ROWS - 9 )); [[ $_wvis -lt 1 ]] && _wvis=1
+                                if (( MB_WL_CURSOR >= MB_WL_SCROLL + _wvis )); then
+                                    MB_WL_SCROLL=$(( MB_WL_CURSOR - _wvis + 1 ))
+                                fi
+                            fi
+                            ;;
+                        a|A)
+                            MB_WL_INPUT_MODE=true
+                            MB_WL_INPUT=""
+                            ;;
+                        d|D)
+                            if (( wl_n > 0 && MB_WL_CURSOR < wl_n )); then
+                                mb_whitelist_remove "${MB_WHITELIST[$MB_WL_CURSOR]}"
+                                local new_n="${#MB_WHITELIST[@]}"
+                                if (( MB_WL_CURSOR >= new_n && new_n > 0 )); then
+                                    MB_WL_CURSOR=$(( new_n - 1 ))
+                                fi
+                            fi
+                            ;;
+                        $'\x1b[D'|$'\x1bOD'|h|H|$'\x1b'|q|Q)
+                            MB_TUI_STATE="MAIN"
+                            ;;
+                    esac
+                fi
+                ;;
+
+            # ── STATUS screen ──────────────────────────────────
+            STATUS)
+                case "$key" in
+                    r|R)
+                        mb_collect_status
+                        ;;
+                    $'\x1b[D'|$'\x1bOD'|h|H|$'\x1b'|q|Q)
+                        MB_TUI_STATE="MAIN"
                         ;;
                 esac
                 ;;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MacBroom – Orphaned app support files (no matching installed app).
+# MacBroom – Orphaned app support files and orphaned ~/. dotfile directories.
 
 _ORPHAN_SEARCH_DIRS=(
     "$HOME/Library/Application Support"
@@ -54,6 +54,61 @@ _is_likely_bundle_dir() {
     return 1
 }
 
+# ── Orphan dotfile detection ───────────────────────────────────
+# Dotfile directory names whose binary counterpart is commonly missing from PATH
+# but are still actively used (kept by a background agent, a GUI app, etc.).
+# We exclude these to avoid false positives.
+_DOTFILE_KNOWN_TOOLS=(
+    npm yarn pnpm bun cargo gem gradle maven conda poetry pyenv
+    flutter dart go rust ruby java python python3 node
+    ollama lmstudio huggingface
+    brew git svn hg
+    docker kubectl helm terraform ansible
+    gcloud aws azure
+    code cursor windsurf idea pycharm webstorm goland
+    vim nvim emacs nano
+    tmux screen zellij
+    iterm2 alacritty warp ghostty
+    rbenv volta nvm asdf sdkman tfenv gvm
+    oh-my-zsh antigen antibody zplug zgen zinit
+    fzf ripgrep fd bat eza lsd
+    jenv jabba
+    conan
+)
+
+_dotfile_binary_known() {
+    local name="${1#.}"   # strip leading dot
+    local t
+    for t in "${_DOTFILE_KNOWN_TOOLS[@]}"; do
+        [[ "${name,,}" == "${t,,}" ]] && return 0
+    done
+    # Also check if a binary with this name actually exists in PATH
+    command -v "$name" &>/dev/null && return 0
+    return 1
+}
+
+# Returns null-delimited paths of ~/. directories with no matching binary.
+_orphan_dotfile_find() {
+    local d name
+    while IFS= read -r -d '' d; do
+        name=$(basename "$d")
+        # Skip non-directories and protected paths
+        [[ -d "$d" ]] || continue
+        # Check MB_PROTECTED_PATHS
+        local prot skip=false
+        for prot in "${MB_PROTECTED_PATHS[@]}"; do
+            if [[ "$d" == "$prot" || "$d" == "$prot/"* ]]; then
+                skip=true; break
+            fi
+        done
+        [[ "$skip" == "true" ]] && continue
+        # Skip if binary or known tool matches
+        _dotfile_binary_known "$name" && continue
+        # Emit this path
+        printf '%s\0' "$d"
+    done < <(find "$HOME" -maxdepth 1 -mindepth 1 -type d -name '.*' -print0 2>/dev/null)
+}
+
 orphaned_files_scan() {
     # Quick scan: count mismatched dirs across all _ORPHAN_SEARCH_DIRS
     local installed
@@ -76,6 +131,12 @@ orphaned_files_scan() {
             fi
         done < <(find "$dir" -maxdepth 1 -mindepth 1 -print0 2>/dev/null)
     done
+
+    # Add orphan dotfile dirs
+    local d
+    while IFS= read -r -d '' d; do
+        orphan_paths+=("$d")
+    done < <(_orphan_dotfile_find)
 
     if [[ ${#orphan_paths[@]} -gt 0 ]]; then
         mb_sum_paths_kb "${orphan_paths[@]}"
@@ -107,6 +168,14 @@ orphaned_files_list() {
             fi
         done < <(find "$dir" -maxdepth 1 -mindepth 1 -print0 2>/dev/null)
     done | sort -t'|' -k1 -rn | head -50
+
+    # Orphan dotfile dirs — binary not found in PATH
+    local d s
+    while IFS= read -r -d '' d; do
+        s=$(du -sk -- "$d" 2>/dev/null | awk '{print $1+0; exit}')
+        s="${s:-0}"
+        printf '%d|[dotfile] %s|%s\n' "$s" "$(basename "$d")" "$d"
+    done < <(_orphan_dotfile_find) | sort -t'|' -k1 -rn
 }
 
 orphaned_files_clean() {
@@ -147,6 +216,21 @@ orphaned_files_clean() {
             fi
         done < <(find "$dir" -maxdepth 1 -mindepth 1 -print0 2>/dev/null)
     done
+
+    # Orphan dotfile dirs
+    local d s
+    while IFS= read -r -d '' d; do
+        s=$(du -sk -- "$d" 2>/dev/null | awk '{print $1+0; exit}')
+        s="${s:-0}"
+        if [[ "$dry_run" == "true" ]]; then
+            mb_dim "  would remove: $(basename "$d")  ($(mb_format_kb "$s"))  [dotfile, no binary found]"
+            cleaned_kb=$(( cleaned_kb + s ))
+        else
+            if mb_safe_rm "$d"; then
+                cleaned_kb=$(( cleaned_kb + s ))
+            fi
+        fi
+    done < <(_orphan_dotfile_find)
 
     [[ -n "$result_file" ]] && printf '%d' "$cleaned_kb" > "$result_file"
 }

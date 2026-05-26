@@ -131,6 +131,7 @@ readonly -a MB_SAFE_PREFIXES=(
     "$HOME/.cargo/git"
     "$HOME/.gem"
     "$HOME/Library/Caches/CocoaPods"
+    "$HOME/Library/Caches/Homebrew"
     "$HOME/Library/Caches/gradle"
     "$HOME/.android/cache"
     "$HOME/Library/Android"
@@ -151,6 +152,15 @@ readonly -a MB_SAFE_PREFIXES=(
     "$HOME/Library/Caches/com.apple.helpd"
     "$HOME/Library/Caches/com.apple.Safari/Safe Browsing"
     "$HOME/Library/Application Support/CrashReporter"
+    # Home directory — enables orphan dotfile cleanup (covered by MB_PROTECTED_PATHS below)
+    "$HOME"
+    # Common developer project roots for Project Artifacts module
+    "$HOME/Developer"
+    "$HOME/Projects"
+    "$HOME/src"
+    "$HOME/code"
+    "$HOME/repos"
+    "$HOME/workspace"
     # Common user folders for Large Old Files module
     "$HOME/Downloads"
     "$HOME/Documents"
@@ -164,15 +174,45 @@ readonly -a MB_SAFE_PREFIXES=(
 # These paths are strictly forbidden from deletion to prevent 
 # critical data loss (SSH keys, GPG, AWS credentials, etc.)
 readonly -a MB_PROTECTED_PATHS=(
+    # Credentials and keys — never touch these
     "$HOME/.ssh"
     "$HOME/.gnupg"
+    "$HOME/.gpg"
     "$HOME/.aws"
     "$HOME/.kube"
-    "$HOME/.gitconfig"
+    "$HOME/.netrc"
+    "$HOME/.docker"
+    # Shell config and history
     "$HOME/.zshrc"
     "$HOME/.bashrc"
     "$HOME/.profile"
-    "$HOME/.local/share"
+    "$HOME/.zsh_history"
+    "$HOME/.bash_history"
+    "$HOME/.zsh_sessions"
+    "$HOME/.bash_sessions"
+    "$HOME/.oh-my-zsh"
+    # Git config
+    "$HOME/.gitconfig"
+    "$HOME/.gitignore"
+    "$HOME/.gitignore_global"
+    # Version managers — contain installed runtimes, not just caches
+    "$HOME/.nvm"
+    "$HOME/.rbenv"
+    "$HOME/.pyenv"
+    "$HOME/.asdf"
+    "$HOME/.sdkman"
+    "$HOME/.volta"
+    "$HOME/.tfenv"
+    "$HOME/.gvm"
+    # Broad XDG dirs that contain many app configs
+    "$HOME/.config"
+    "$HOME/.local"
+    # macOS system metadata
+    "$HOME/.Spotlight-V100"
+    "$HOME/.fseventsd"
+    "$HOME/.Trash"
+    "$HOME/.TemporaryItems"
+    "$HOME/.DocumentRevisions-V100"
 )
 
 # Returns 0 if a path is within a known-safe prefix, 1 otherwise.
@@ -180,11 +220,23 @@ mb_is_safe_path() {
     local target="${1%/}"
     [[ -z "$target" ]] && return 1
 
+    # Never allow HOME itself — only subdirs are permitted
+    [[ "$target" == "$HOME" ]] && return 1
+
     # Check against protected paths first
     local prot
     for prot in "${MB_PROTECTED_PATHS[@]}"; do
         if [[ "$target" == "$prot" || "$target" == "$prot/"* ]]; then
             mb_error "Access Denied: $target is a protected system/config path"
+            return 1
+        fi
+    done
+
+    # Check user whitelist — whitelisted paths are PROTECTED (deletion refused)
+    local wl
+    for wl in "${MB_WHITELIST[@]+"${MB_WHITELIST[@]}"}"; do
+        if [[ "$target" == "$wl" || "$target" == "$wl/"* ]]; then
+            mb_warn "Skipping whitelisted path: $target"
             return 1
         fi
     done
@@ -269,6 +321,44 @@ mb_has_sudo() { sudo -n true 2>/dev/null; }
 mb_is_root()  { [[ "$EUID" -eq 0 ]]; }
 
 mb_command_exists() { command -v "$1" &>/dev/null; }
+
+# ── User whitelist (protected paths the user added) ────────────
+# Stored at ~/.config/macbroom/whitelist — one path per line.
+# mb_safe_rm refuses to delete any path matching an entry here.
+readonly MB_WHITELIST_FILE="$HOME/.config/macbroom/whitelist"
+
+mb_whitelist_load() {
+    MB_WHITELIST=()
+    [[ -f "$MB_WHITELIST_FILE" ]] || return 0
+    local line
+    while IFS= read -r line; do
+        line="${line/#\~/$HOME}"   # expand leading ~
+        line="${line%/}"           # strip trailing slash
+        [[ -n "$line" && "$line" != '#'* ]] && MB_WHITELIST+=("$line")
+    done < "$MB_WHITELIST_FILE"
+}
+
+mb_whitelist_add() {
+    local path="${1%/}"
+    mkdir -p "$(dirname "$MB_WHITELIST_FILE")" 2>/dev/null || true
+    # Don't add duplicates
+    if [[ -f "$MB_WHITELIST_FILE" ]] && grep -qxF "$path" "$MB_WHITELIST_FILE" 2>/dev/null; then
+        return 0
+    fi
+    printf '%s\n' "$path" >> "$MB_WHITELIST_FILE"
+    mb_whitelist_load
+}
+
+mb_whitelist_remove() {
+    local path="${1%/}"
+    [[ -f "$MB_WHITELIST_FILE" ]] || return 0
+    local tmp; tmp=$(mktemp)
+    grep -vxF "$path" "$MB_WHITELIST_FILE" > "$tmp" 2>/dev/null || true
+    mv "$tmp" "$MB_WHITELIST_FILE"
+    mb_whitelist_load
+}
+
+MB_WHITELIST=()
 
 # Checks macOS version (major). e.g. mb_macos_ge 13 → true on Ventura+
 mb_macos_ge() {

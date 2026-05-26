@@ -299,7 +299,7 @@ _render_main() {
     # ── Footer ─────────────────────────────────────────────────
     _draw_hr $(( _MB_ROWS - 1 ))
     mb_goto 1 $(( _MB_ROWS ))
-    printf " ${C_DIM}↑↓ Navigate  Space Toggle  → Preview  Enter Clean  A All  N None  Q Quit${C_NC}"
+    printf " ${C_DIM}↑↓ Navigate  Space Toggle  → Preview  Enter Clean  A All  N None  S Status  W Whitelist  Q Quit${C_NC}"
     tput el 2>/dev/null || true
 }
 
@@ -501,6 +501,233 @@ _render_done() {
     printf "${C_DIM}Press any key to rescan and return to main menu  Q to quit${C_NC}"
 }
 
+# ── STATUS screen ──────────────────────────────────────────────
+MB_STATUS_CPU_USER=0
+MB_STATUS_CPU_SYS=0
+MB_STATUS_CPU_IDLE=100
+MB_STATUS_RAM_USED_KB=0
+MB_STATUS_RAM_CACHED_KB=0
+MB_STATUS_RAM_FREE_KB=0
+MB_STATUS_RAM_TOTAL_KB=0
+MB_STATUS_SWAP_USED_KB=0
+MB_STATUS_SWAP_TOTAL_KB=0
+MB_STATUS_UPTIME="unknown"
+MB_STATUS_LOAD_1="0.00"
+MB_STATUS_LOAD_5="0.00"
+MB_STATUS_LOAD_15="0.00"
+MB_STATUS_TOP_PROCS=()
+MB_STATUS_LOADED=false
+
+mb_collect_status() {
+    MB_STATUS_LOADED=false
+
+    # CPU and load averages from top
+    local top_out
+    top_out=$(top -l 1 -n 0 -s 0 2>/dev/null)
+
+    local cpu_line
+    cpu_line=$(printf '%s\n' "$top_out" | grep "^CPU usage:" | head -1)
+    MB_STATUS_CPU_USER=$(printf '%s' "$cpu_line" | grep -oE '[0-9]+\.[0-9]+% user' | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    MB_STATUS_CPU_SYS=$(printf '%s' "$cpu_line"  | grep -oE '[0-9]+\.[0-9]+% sys'  | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    MB_STATUS_CPU_IDLE=$(printf '%s' "$cpu_line" | grep -oE '[0-9]+\.[0-9]+% idle' | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    MB_STATUS_CPU_USER="${MB_STATUS_CPU_USER:-0}"
+    MB_STATUS_CPU_SYS="${MB_STATUS_CPU_SYS:-0}"
+    MB_STATUS_CPU_IDLE="${MB_STATUS_CPU_IDLE:-100}"
+
+    local load_line
+    load_line=$(printf '%s\n' "$top_out" | grep "^Load Avg:" | head -1)
+    MB_STATUS_LOAD_1=$(printf '%s' "$load_line" | awk '{print $3}' | tr -d ',')
+    MB_STATUS_LOAD_5=$(printf '%s' "$load_line" | awk '{print $4}' | tr -d ',')
+    MB_STATUS_LOAD_15=$(printf '%s' "$load_line" | awk '{print $5}')
+    MB_STATUS_LOAD_1="${MB_STATUS_LOAD_1:-0.00}"
+    MB_STATUS_LOAD_5="${MB_STATUS_LOAD_5:-0.00}"
+    MB_STATUS_LOAD_15="${MB_STATUS_LOAD_15:-0.00}"
+
+    # RAM from vm_stat (each page = 4096 bytes)
+    local vm_out; vm_out=$(vm_stat 2>/dev/null)
+    local pf pa pi pw
+    pf=$(printf '%s\n' "$vm_out" | awk '/Pages free:/        {gsub(/\./,"",$NF); print $NF+0}')
+    pa=$(printf '%s\n' "$vm_out" | awk '/Pages active:/      {gsub(/\./,"",$NF); print $NF+0}')
+    pi=$(printf '%s\n' "$vm_out" | awk '/Pages inactive:/    {gsub(/\./,"",$NF); print $NF+0}')
+    pw=$(printf '%s\n' "$vm_out" | awk '/Pages wired down:/  {gsub(/\./,"",$NF); print $NF+0}')
+    local used_p=$(( ${pa:-0} + ${pw:-0} ))
+    local cached_p=${pi:-0}
+    local free_p=${pf:-0}
+    local total_p=$(( used_p + cached_p + free_p ))
+    MB_STATUS_RAM_USED_KB=$(( used_p   * 4096 / 1024 ))
+    MB_STATUS_RAM_CACHED_KB=$(( cached_p * 4096 / 1024 ))
+    MB_STATUS_RAM_FREE_KB=$(( free_p  * 4096 / 1024 ))
+    MB_STATUS_RAM_TOTAL_KB=$(( total_p * 4096 / 1024 ))
+
+    # Swap
+    local swap_out; swap_out=$(sysctl vm.swapusage 2>/dev/null)
+    local stm sum
+    stm=$(printf '%s\n' "$swap_out" | grep -oE 'total = [0-9.]+M' | grep -oE '[0-9.]+')
+    sum=$(printf '%s\n' "$swap_out" | grep -oE 'used = [0-9.]+M'  | grep -oE '[0-9.]+')
+    MB_STATUS_SWAP_TOTAL_KB=$(awk "BEGIN{printf \"%d\", ${stm:-0}*1024}")
+    MB_STATUS_SWAP_USED_KB=$(awk  "BEGIN{printf \"%d\", ${sum:-0}*1024}")
+
+    # Uptime — extract the "X days, H:MM" part between "up" and the user count
+    MB_STATUS_UPTIME=$(uptime 2>/dev/null | \
+        awk -F'up ' '{print $2}' | \
+        awk -F', [0-9]+ user' '{print $1}' | \
+        sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    MB_STATUS_UPTIME="${MB_STATUS_UPTIME:-unknown}"
+
+    # Top 5 processes by CPU
+    MB_STATUS_TOP_PROCS=()
+    local line
+    while IFS= read -r line; do
+        MB_STATUS_TOP_PROCS+=("$line")
+    done < <(ps aux 2>/dev/null | sort -k3 -rn | awk 'NR>1 && NR<=6 && $3>0 {
+        cpu=$3; cmd=$11; pid=$2
+        gsub(/.*\//, "", cmd)
+        printf "%5.1f%%  %-22s PID %s\n", cpu, cmd, pid
+    }')
+
+    MB_STATUS_LOADED=true
+}
+
+_render_status() {
+    mb_update_term_size
+    mb_clrscr
+    local row=2
+
+    mb_goto 1 $row
+    printf "  ${C_BOLD}MacBroom${C_NC}  ${C_DIM}›  System Status${C_NC}"
+    _draw_hr 3
+    row=4
+
+    if [[ "$MB_STATUS_LOADED" != "true" ]]; then
+        mb_goto 3 $row
+        printf "  ${C_CYAN}⠋${C_NC}  Collecting system data..."
+        return
+    fi
+
+    local bw=16
+
+    # CPU
+    local cpu_used; cpu_used=$(awk "BEGIN{printf \"%d\", 100 - ${MB_STATUS_CPU_IDLE}}")
+    local cpu_bar; cpu_bar=$(mb_size_bar "$cpu_used" "$bw")
+    _draw_row_simple 3 $row \
+        "CPU    ${cpu_bar}  ${C_BOLD}${MB_STATUS_CPU_USER}%${C_NC}${C_DIM} user  ${MB_STATUS_CPU_SYS}% sys  ${MB_STATUS_CPU_IDLE}% idle${C_NC}"
+    row=$(( row + 1 ))
+
+    # RAM
+    local ram_pct=0
+    if (( MB_STATUS_RAM_TOTAL_KB > 0 )); then
+        ram_pct=$(( MB_STATUS_RAM_USED_KB * 100 / MB_STATUS_RAM_TOTAL_KB ))
+    fi
+    local ram_bar; ram_bar=$(mb_size_bar "$ram_pct" "$bw")
+    _draw_row_simple 3 $row \
+        "RAM    ${ram_bar}  ${C_BOLD}$(mb_format_kb "$MB_STATUS_RAM_USED_KB")${C_NC}${C_DIM} used  $(mb_format_kb "$MB_STATUS_RAM_CACHED_KB") cached  $(mb_format_kb "$MB_STATUS_RAM_FREE_KB") free  / $(mb_format_kb "$MB_STATUS_RAM_TOTAL_KB")${C_NC}"
+    row=$(( row + 1 ))
+
+    # Swap
+    if (( MB_STATUS_SWAP_TOTAL_KB > 0 )); then
+        local swap_pct=$(( MB_STATUS_SWAP_USED_KB * 100 / MB_STATUS_SWAP_TOTAL_KB ))
+        local swap_bar; swap_bar=$(mb_size_bar "$swap_pct" "$bw")
+        _draw_row_simple 3 $row \
+            "Swap   ${swap_bar}  ${C_BOLD}$(mb_format_kb "$MB_STATUS_SWAP_USED_KB")${C_NC}${C_DIM} / $(mb_format_kb "$MB_STATUS_SWAP_TOTAL_KB")${C_NC}"
+        row=$(( row + 1 ))
+    fi
+
+    # Load
+    _draw_row_simple 3 $row \
+        "Load   ${C_BOLD}${MB_STATUS_LOAD_1}${C_NC}${C_DIM}  ${MB_STATUS_LOAD_5}  ${MB_STATUS_LOAD_15}  (1m / 5m / 15m)${C_NC}"
+    row=$(( row + 1 ))
+
+    # Uptime
+    _draw_row_simple 3 $row "Uptime ${C_BOLD}${MB_STATUS_UPTIME}${C_NC}"
+    row=$(( row + 1 ))
+
+    _draw_hr $row
+    row=$(( row + 1 ))
+
+    _draw_row_simple 3 $row "${C_DIM}Top Processes by CPU:${C_NC}"
+    row=$(( row + 1 ))
+
+    local p
+    for p in "${MB_STATUS_TOP_PROCS[@]}"; do
+        if (( row >= _MB_ROWS - 2 )); then break; fi
+        _draw_row_simple 5 $row "${C_DIM}${p}${C_NC}"
+        row=$(( row + 1 ))
+    done
+
+    # Clear remaining rows
+    while (( row < _MB_ROWS - 1 )); do
+        mb_goto 1 $row; tput el 2>/dev/null || true
+        row=$(( row + 1 ))
+    done
+
+    _draw_hr $(( _MB_ROWS - 1 ))
+    mb_goto 1 $(( _MB_ROWS ))
+    printf " ${C_DIM}R Refresh  ← / Q Back${C_NC}"
+    tput el 2>/dev/null || true
+}
+
+# ── WHITELIST screen ───────────────────────────────────────────
+MB_WL_CURSOR=0
+MB_WL_SCROLL=0
+MB_WL_INPUT=""
+MB_WL_INPUT_MODE=false
+
+_render_whitelist() {
+    mb_update_term_size
+    mb_clrscr
+    local row=2
+
+    mb_goto 1 $row
+    printf "  ${C_BOLD}MacBroom${C_NC}  ${C_DIM}›  Whitelist${C_NC}"
+    _draw_hr 3
+    row=4
+
+    _draw_row_simple 3 $row "${C_DIM}Paths listed here are PROTECTED — MacBroom will never delete them.${C_NC}"
+    row=$(( row + 1 ))
+    _draw_hr $row
+    row=$(( row + 1 ))
+
+    local list_rows=$(( _MB_ROWS - row - 3 ))
+    if [[ $list_rows -lt 1 ]]; then list_rows=1; fi
+
+    local n_entries="${#MB_WHITELIST[@]}"
+
+    if [[ $n_entries -eq 0 ]]; then
+        _draw_row_simple 3 $row "${C_DIM}(no protected paths — press A to add one)${C_NC}"
+        row=$(( row + 1 ))
+    else
+        local max_scroll=$(( n_entries - list_rows ))
+        if [[ $max_scroll -lt 0 ]]; then max_scroll=0; fi
+        if (( MB_WL_SCROLL > max_scroll )); then MB_WL_SCROLL=$max_scroll; fi
+
+        local i
+        for (( i=MB_WL_SCROLL; i<n_entries; i++ )); do
+            if (( row >= _MB_ROWS - 3 )); then break; fi
+            local cursor_str="  "
+            if [[ "$i" -eq "$MB_WL_CURSOR" ]]; then cursor_str="${C_CYAN}▶ ${C_NC}"; fi
+            _draw_row_simple 1 $row "${cursor_str}${C_DIM}${MB_WHITELIST[$i]}${C_NC}"
+            row=$(( row + 1 ))
+        done
+    fi
+
+    # Clear stale rows
+    while (( row < _MB_ROWS - 2 )); do
+        mb_goto 1 $row; tput el 2>/dev/null || true
+        row=$(( row + 1 ))
+    done
+
+    # Input bar
+    _draw_hr $(( _MB_ROWS - 2 ))
+    if [[ "$MB_WL_INPUT_MODE" == "true" ]]; then
+        _draw_row_simple 3 $(( _MB_ROWS - 1 )) \
+            "${C_YELLOW}Add path:${C_NC} ${MB_WL_INPUT}${C_CYAN}_${C_NC}"
+    else
+        _draw_row_simple 3 $(( _MB_ROWS - 1 )) \
+            "${C_DIM}↑↓ Navigate  A Add  D Delete  Enter Confirm  ← / Q Back${C_NC}"
+    fi
+    tput el 2>/dev/null || true
+}
+
 _MB_LAST_STATE=""
 mb_tui_render() {
     # On state transitions, do a full clear once so stale content from the
@@ -515,6 +742,8 @@ mb_tui_render() {
         PREVIEW)  _render_preview ;;
         CLEANING) _render_cleaning ;;
         DONE)     _render_done ;;
+        STATUS)    _render_status ;;
+        WHITELIST) _render_whitelist ;;
     esac
 }
 

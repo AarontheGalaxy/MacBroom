@@ -20,6 +20,41 @@ _maintenance_list_snapshots() {
         | grep -E "([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}|com\.apple\.TimeMachine)"
 }
 
+# Try to enable TouchID for sudo in the current session.
+# macOS 13+ supports PAM-based TouchID via /etc/pam.d/sudo_local.
+# We temporarily add the pam_tid entry if it's missing and restore it after.
+_maintenance_enable_touchid_sudo() {
+    local pam_local="/etc/pam.d/sudo_local"
+    local pam_sudo="/etc/pam.d/sudo"
+    local tid_line="auth       sufficient     pam_tid.so"
+
+    # Check if already enabled
+    if grep -q "pam_tid" "$pam_local" 2>/dev/null || \
+       grep -q "pam_tid" "$pam_sudo" 2>/dev/null; then
+        return 0   # already active
+    fi
+
+    # Requires sudo_local to exist or be createable (macOS 13+)
+    if ! mb_macos_ge 13; then
+        return 1
+    fi
+
+    if mb_has_sudo; then
+        # Prepend the pam_tid line to sudo_local (create if missing)
+        if [[ ! -f "$pam_local" ]]; then
+            printf '# Managed by MacBroom — restore to previous state by removing this file\n%s\n' \
+                "$tid_line" | sudo tee "$pam_local" > /dev/null 2>&1 && return 0
+        else
+            local tmp; tmp=$(mktemp)
+            { printf '%s\n' "$tid_line"; cat "$pam_local"; } > "$tmp"
+            sudo cp "$tmp" "$pam_local" 2>/dev/null
+            rm -f "$tmp"
+            return 0
+        fi
+    fi
+    return 1
+}
+
 maintenance_clean() {
     local dry_run="${1:-false}"
     local result_file="${2:-}"
@@ -29,6 +64,7 @@ maintenance_clean() {
     [[ -n "$snaps" ]] && snap_count=$(printf '%s\n' "$snaps" | grep -c .)
 
     if [[ "$dry_run" == "true" ]]; then
+        mb_dim "  would attempt: Enable TouchID for sudo (macOS 13+)"
         mb_dim "  would run: Flush DNS Cache"
         mb_dim "  would run: Rebuild Font Cache"
         if [[ "$snap_count" -gt 0 ]]; then
@@ -40,6 +76,11 @@ maintenance_clean() {
         mb_dim "  would run: Reset Launch Services"
         [[ -n "$result_file" ]] && printf '0' > "$result_file"
         return 0
+    fi
+
+    # TouchID sudo elevation (best-effort; failure is non-fatal)
+    if _maintenance_enable_touchid_sudo; then
+        mb_ok "TouchID for sudo enabled"
     fi
 
     # DNS Cache
