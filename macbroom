@@ -357,7 +357,7 @@ _run_clean_modules() {
             [[ "${MB_CLEAN_STATUS[$_j]:-}" != "skipped" ]] && mod_row=$(( mod_row + 1 ))
         done
 
-        ( trap - INT TERM EXIT; "$fn" "$dry_run" "$rfile" ) >/dev/null 2>&1 &
+        ( trap - INT TERM EXIT; "$fn" "$dry_run" "$rfile" ) </dev/null >/dev/null 2>&1 &
         local cpid=$!
         (
             trap - INT TERM EXIT
@@ -675,6 +675,8 @@ _tui_main() {
                         if [[ "$any" -eq 1 ]]; then
                             MB_TUI_STATE="CLEANING"
                             _run_clean_modules "$MB_DRY_RUN"
+                            stty -echo -icanon min 1 time 0 2>/dev/null || true
+                            mb_drain_input
                             MB_TUI_STATE="DONE"
                         fi
                         ;;
@@ -830,6 +832,8 @@ _tui_main() {
                         done
                         if [[ "$any" -eq 1 ]]; then
                             _run_clean_preview_selected
+                            stty -echo -icanon min 1 time 0 2>/dev/null || true
+                            mb_drain_input
                             MB_TUI_STATE="DONE"
                         fi
                         ;;
@@ -938,6 +942,7 @@ _tui_main() {
                 MB_TUI_STATE="SCANNING"
                 mb_tui_render
                 _run_scan
+                stty -echo -icanon min 1 time 0 2>/dev/null || true
                 MB_TUI_STATE="MAIN"
                 ;;
         esac
