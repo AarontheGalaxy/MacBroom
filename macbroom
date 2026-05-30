@@ -278,6 +278,7 @@ _run_scan() {
         fi
         # Run scan. Create a progress file while running.
         (
+            trap - INT TERM EXIT
             touch "$progress_dir/$i"
             "$fn" > "$tmpdir/$i" 2>/dev/null
             rm -f "$progress_dir/$i"
@@ -356,9 +357,10 @@ _run_clean_modules() {
             [[ "${MB_CLEAN_STATUS[$_j]:-}" != "skipped" ]] && mod_row=$(( mod_row + 1 ))
         done
 
-        "$fn" "$dry_run" "$rfile" >/dev/null 2>&1 &
+        ( trap - INT TERM EXIT; "$fn" "$dry_run" "$rfile" ) >/dev/null 2>&1 &
         local cpid=$!
         (
+            trap - INT TERM EXIT
             local cyc=0
             local frames='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
             while true; do
@@ -502,7 +504,7 @@ _load_preview() {
 
     local tmpfile
     tmpfile=$(mktemp)
-    ( "$fn" > "$tmpfile" 2>/dev/null ) &
+    ( trap - INT TERM EXIT; "$fn" > "$tmpfile" 2>/dev/null ) &
     local lpid=$!
 
     while kill -0 "$lpid" 2>/dev/null; do

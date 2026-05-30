@@ -4,11 +4,13 @@
 readonly _LOF_MIN_SIZE_MB="${MB_LOF_MIN_SIZE_MB:-500}"
 readonly _LOF_MIN_DAYS="${MB_LOF_MIN_DAYS:-180}"
 
-_LOF_EXCLUDE_DIRS=(
-    "$HOME/Library"
-    "$HOME/Pictures"
+_LOF_SEARCH_DIRS=(
+    "$HOME/Downloads"
+    "$HOME/Documents"
+    "$HOME/Desktop"
+    "$HOME/Music"
     "$HOME/Movies"
-    "$HOME/.Trash"
+    "$HOME/Pictures"
 )
 
 large_old_files_scan() {
@@ -18,13 +20,14 @@ large_old_files_scan() {
 }
 
 large_old_files_list() {
-    local exclude_args=()
+    local roots=()
     local d
-    for d in "${_LOF_EXCLUDE_DIRS[@]}"; do
-        exclude_args+=( "!" "-path" "${d}/*" )
+    for d in "${_LOF_SEARCH_DIRS[@]}"; do
+        [[ -d "$d" ]] && roots+=("$d")
     done
-    find "$HOME" -maxdepth 6 -type f \
-        "${exclude_args[@]}" \
+    [[ ${#roots[@]} -eq 0 ]] && return 0
+
+    find "${roots[@]}" -maxdepth 6 -type f \
         -size "+${_LOF_MIN_SIZE_MB}M" \
         -atime "+${_LOF_MIN_DAYS}" \
         2>/dev/null | head -100 | \
@@ -40,23 +43,22 @@ large_old_files_clean() {
     local dry_run="${1:-false}"
     local result_file="${2:-}"
     local cleaned_kb=0
-    local exclude_args=()
+    local roots=()
     local d
-    for d in "${_LOF_EXCLUDE_DIRS[@]}"; do
-        exclude_args+=( "!" "-path" "${d}/*" )
+    for d in "${_LOF_SEARCH_DIRS[@]}"; do
+        [[ -d "$d" ]] && roots+=("$d")
     done
-    # Write to tmpfile to avoid cleaned_kb being lost in subshell
+
     local tmpfile; tmpfile=$(mktemp)
-    find "$HOME" -maxdepth 6 -type f \
-        "${exclude_args[@]}" \
-        -size "+${_LOF_MIN_SIZE_MB}M" \
-        -atime "+${_LOF_MIN_DAYS}" \
-        2>/dev/null | head -100 > "$tmpfile"
+    if [[ ${#roots[@]} -gt 0 ]]; then
+        find "${roots[@]}" -maxdepth 6 -type f \
+            -size "+${_LOF_MIN_SIZE_MB}M" \
+            -atime "+${_LOF_MIN_DAYS}" \
+            2>/dev/null | head -100 > "$tmpfile"
+    fi
+
     while IFS= read -r f; do
         [[ -f "$f" ]] || continue
-        # Basic safety check: must be under $HOME, not / or $HOME itself
-        [[ "$f" == "$HOME" || "$f" == "/" ]] && continue
-        [[ "$f" != "$HOME/"* ]] && continue
         local s; s=$(du -sk -- "$f" 2>/dev/null | awk '{print $1+0; exit}')
         s="${s:-0}"
         if [[ "$dry_run" == "true" ]]; then

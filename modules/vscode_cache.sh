@@ -44,8 +44,9 @@ vscode_cache_clean() {
             mb_dim "  would remove: $(basename "$d")  ($(mb_format_kb "$size_kb"))"
             cleaned_kb=$(( cleaned_kb + size_kb ))
         else
-            mb_safe_rm "$d" || true
-            cleaned_kb=$(( cleaned_kb + size_kb ))
+            if mb_safe_rm "$d"; then
+                cleaned_kb=$(( cleaned_kb + size_kb ))
+            fi
         fi
     done
 

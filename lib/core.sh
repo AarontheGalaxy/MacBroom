@@ -210,7 +210,6 @@ readonly -a MB_PROTECTED_PATHS=(
     # macOS system metadata
     "$HOME/.Spotlight-V100"
     "$HOME/.fseventsd"
-    "$HOME/.Trash"
     "$HOME/.TemporaryItems"
     "$HOME/.DocumentRevisions-V100"
 )
@@ -222,6 +221,13 @@ mb_is_safe_path() {
 
     # Never allow HOME itself — only subdirs are permitted
     [[ "$target" == "$HOME" ]] && return 1
+
+    # Allow /Volumes/<name>/.Trashes/<uid> — current user's trash on external drives.
+    # This check runs before protected paths so the trash module can clean volumes.
+    if [[ "$target" == /Volumes/*/.Trashes/"$UID" || \
+          "$target" == /Volumes/*/.Trashes/"$UID"/* ]]; then
+        return 0
+    fi
 
     # Check against protected paths first
     local prot

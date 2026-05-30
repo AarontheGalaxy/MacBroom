@@ -65,7 +65,7 @@ APFS Purgeable: 12.3 GB
 Most Mac cleaning apps are closed-source GUI applications. You click a button and files disappear — with no way to know what was actually deleted, or whether the tool is safe. MacBroom is the opposite of that.
 
 - **Fully open source** — every line of code is readable and auditable
-- **Hard-coded allowlist** — `mb_safe_rm()` refuses to delete anything outside an explicit list of safe directories; a bug in a module *cannot* delete your home folder or system files
+- **Hard-coded allowlist** — `mb_safe_rm()` refuses to delete anything outside an explicit list of safe directories; a bug in a module _cannot_ delete your home folder or system files
 - **No surprises** — Preview mode shows you the exact list of files before you delete anything; nothing is deleted until you explicitly select it and confirm
 - **No external runtime** — pure Bash, no Homebrew, no pip packages, no npm modules; works on any Mac out of the box
 - **No network access** — zero telemetry, no update checks, no data collection of any kind
@@ -95,12 +95,12 @@ bash install.sh
 
 ## Requirements
 
-| Requirement | Details |
-| ----------- | ------- |
-| macOS | 11 Big Sur or later |
-| Bash | 3.2+ (pre-installed on every Mac since 2007) |
-| Terminal | Any terminal with UTF-8 and 256-color support — Terminal.app, iTerm2, Ghostty, Warp, Alacritty all work |
-| Disk space | Less than 1 MB for the entire project |
+| Requirement | Details                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------- |
+| macOS       | 11 Big Sur or later                                                                                     |
+| Bash        | 3.2+ (pre-installed on every Mac since 2007)                                                            |
+| Terminal    | Any terminal with UTF-8 and 256-color support — Terminal.app, iTerm2, Ghostty, Warp, Alacritty all work |
+| Disk space  | Less than 1 MB for the entire project                                                                   |
 
 > **Recommended:** Go to `System Settings → Privacy & Security → Full Disk Access` and add your terminal app. This lets MacBroom scan protected folders like `~/Library/Mail` and `~/Library/Containers`. Without it, some modules may report smaller sizes than reality because macOS blocks access.
 
@@ -117,6 +117,7 @@ bash install.sh
 ```
 
 What the installer does:
+
 1. Copies the entire project to `~/.macbroom/`
 2. Creates a launcher script at `/usr/local/bin/macbroom` (or `~/.local/bin/macbroom` if `/usr/local/bin` is not writable)
 
@@ -208,27 +209,27 @@ APFS Purgeable: 12.3 GB
 
 **What each part of a row means:**
 
-| Symbol | Meaning |
-| ------ | ------- |
-| `▶` | The cursor — this is the row you are currently on |
-| `○` | Not selected — will not be cleaned |
-| `●` | Selected for cleaning |
-| `[S]` | Safe — apps rebuild these automatically, no side effects |
-| `[M]` | Moderate — safe to remove, but some apps may be slower on first launch after |
-| `[R]` | Risky — permanently deletes user data; must be selected manually every time |
-| `·····` | Dot leader — visually connects the module name to its size bar |
-| `■■■□□□` | Size bar — shows size relative to the largest category |
-| Number on right | Total reclaimable size for this category |
-| `—` | Size not yet scanned (deferred modules) |
+| Symbol          | Meaning                                                                      |
+| --------------- | ---------------------------------------------------------------------------- |
+| `▶`             | The cursor — this is the row you are currently on                            |
+| `○`             | Not selected — will not be cleaned                                           |
+| `●`             | Selected for cleaning                                                        |
+| `[S]`           | Safe — apps rebuild these automatically, no side effects                     |
+| `[M]`           | Moderate — safe to remove, but some apps may be slower on first launch after |
+| `[R]`           | Risky — permanently deletes user data; must be selected manually every time  |
+| `·····`         | Dot leader — visually connects the module name to its size bar               |
+| `■■■□□□`        | Size bar — shows size relative to the largest category                       |
+| Number on right | Total reclaimable size for this category                                     |
+| `—`             | Size not yet scanned (deferred modules)                                      |
 
 **The size number changes color** to communicate selection state at a glance:
 
-| Size color | Meaning |
-| ---------- | ------- |
-| **Bold** | Cursor is on this row (not selected) |
-| **Green** | Selected (`●`) |
-| **Bold green** | Selected AND cursor is on this row |
-| Dim | Not selected, not the cursor |
+| Size color     | Meaning                              |
+| -------------- | ------------------------------------ |
+| **Bold**       | Cursor is on this row (not selected) |
+| **Green**      | Selected (`●`)                       |
+| **Bold green** | Selected AND cursor is on this row   |
+| Dim            | Not selected, not the cursor         |
 
 **The info bar** (second row from bottom): Shows the safety badge in color (`[S]` green / `[M]` yellow / `[R]` red), followed by a one-line description of the highlighted module, and a scroll position like `(1-10/29)` when the list is taller than your terminal. You always know the safety level of the highlighted row without looking at the left column.
 
@@ -282,13 +283,14 @@ All items are pre-selected because the category was already marked `●`. You ca
 
 **What each symbol means:**
 
-| Symbol | Meaning |
-| ------ | ------- |
-| `[ ]` | Not selected — will NOT be deleted |
-| `[✓]` | Selected — WILL be deleted when you press Enter |
-| `▶` | Your cursor position |
+| Symbol | Meaning                                         |
+| ------ | ----------------------------------------------- |
+| `[ ]`  | Not selected — will NOT be deleted              |
+| `[✓]`  | Selected — WILL be deleted when you press Enter |
+| `▶`    | Your cursor position                            |
 
 **The footer changes** based on selection state:
+
 - Nothing selected → `Space to select files — nothing deleted until you select`
 - Items selected → `Enter Delete N selected` (where N is the count)
 
@@ -310,11 +312,11 @@ Appears automatically while MacBroom is deleting files. You cannot interact with
 Progress: ■■■■■■■□□□□□□□□□□□□□ 1/3
 ```
 
-| Symbol | Meaning |
-| ------ | ------- |
-| `✓` green | Done |
+| Symbol              | Meaning                 |
+| ------------------- | ----------------------- |
+| `✓` green           | Done                    |
 | `⠙` cyan (animated) | Currently being cleaned |
-| `○` dim | Waiting |
+| `○` dim             | Waiting                 |
 
 The progress bar shows how many categories have finished out of the total selected.
 
@@ -360,28 +362,29 @@ Opened by pressing `S` on the Main screen. Shows a real-time snapshot of your Ma
   Uptime 3 days, 14:22
 
 ──────────────────────────────────────────────────────────────────────────────
-  Top processes by memory:
-  WindowServer          1.2 GB
-  Xcode                 980 MB
-  Google Chrome         740 MB
-  Slack                 420 MB
-  Docker Desktop        380 MB
+  Top Processes by CPU:
+   24.1%  Xcode                  PID 1234
+   18.3%  Google Chrome          PID 5678
+    9.7%  WindowServer           PID 91
+    4.2%  Slack                  PID 2345
+    2.1%  Docker Desktop         PID 6789
 ──────────────────────────────────────────────────────────────────────────────
   R Refresh  ← / Q Back
 ```
 
 **What each metric means:**
 
-| Metric | Source | Details |
-| ------ | ------ | ------- |
-| CPU | `top -l 1` | User, sys, and idle percentages from the current sample |
-| RAM | `vm_stat` | Active + wired = used; inactive = cached; free page count × 4096 bytes |
-| Swap | `sysctl vm.swapusage` | Virtual memory swapped to disk (only shown if swap is in use) |
-| Load | `uptime` | 1-minute, 5-minute, and 15-minute load averages |
-| Uptime | `uptime` | Time since last boot |
-| Top processes | `ps aux` | Top 5 processes sorted by RSS (resident set size / physical memory) |
+| Metric        | Source                | Details                                                                |
+| ------------- | --------------------- | ---------------------------------------------------------------------- |
+| CPU           | `top -l 1`            | User, sys, and idle percentages from the current sample                |
+| RAM           | `vm_stat`             | Active + wired = used; inactive = cached; free page count × 4096 bytes |
+| Swap          | `sysctl vm.swapusage` | Virtual memory swapped to disk (only shown if swap is in use)          |
+| Load          | `uptime`              | 1-minute, 5-minute, and 15-minute load averages                        |
+| Uptime        | `uptime`              | Time since last boot                                                   |
+| Top processes | `ps aux`              | Top 5 processes sorted by CPU usage                                    |
 
 **How to use it:**
+
 - Press `R` to refresh all metrics with a new sample
 - Press `←` or `Q` to return to the Main screen
 
@@ -420,14 +423,14 @@ Opened by pressing `W` on the Main screen. Lets you permanently protect any fold
 
 **Navigation:**
 
-| Key | Action |
-| --- | ------ |
-| `↑` / `↓` | Move cursor between entries |
-| `A` | Enter add mode — type a path and press Enter to confirm |
-| `D` | Delete the highlighted entry from the whitelist |
-| `Enter` | Confirm typed path (in add mode) |
-| `Backspace` | Delete last character (in add mode) |
-| `←` or `Q` | Return to Main screen |
+| Key         | Action                                                  |
+| ----------- | ------------------------------------------------------- |
+| `↑` / `↓`   | Move cursor between entries                             |
+| `A`         | Enter add mode — type a path and press Enter to confirm |
+| `D`         | Delete the highlighted entry from the whitelist         |
+| `Enter`     | Confirm typed path (in add mode)                        |
+| `Backspace` | Delete last character (in add mode)                     |
+| `←` or `Q`  | Return to Main screen                                   |
 
 **Use case example:** You have `~/Downloads/client-assets/` which you never want accidentally cleaned, even though `~/Downloads` is in the safe-path list. Adding it to the whitelist guarantees MacBroom will skip it entirely, regardless of what any module reports.
 
@@ -513,12 +516,14 @@ Example: delete only Chrome's cache, keep Safari and Firefox
 The two modes are linked — selecting a category on the Main screen automatically pre-selects all of its contents in Preview.
 
 **Scenario A — Select on Main screen, then clean directly:**
+
 ```
 Space (on Browser Caches)  →  ●
 Enter  →  everything in Browser Caches is deleted
 ```
 
 **Scenario B — Select on Main screen, then open Preview to review:**
+
 ```
 Space (on Browser Caches)  →  ●
 → (open Preview)  →  all items are already [✓]
@@ -527,6 +532,7 @@ Enter  →  everything except Safari is deleted
 ```
 
 **Scenario C — Open Preview without selecting first:**
+
 ```
 → (open Preview, module is still ○)  →  all items start as [ ]
 Space on what you want  →  [✓]
@@ -534,6 +540,7 @@ Enter  →  only your selections are deleted
 ```
 
 This gives you full flexibility:
+
 - `A` then `Enter` = delete everything in all Safe/Moderate categories at once
 - `A` then `→` on a category = review and remove individual items before committing
 - `→` without selecting = browse freely and pick exactly what you want
@@ -544,60 +551,60 @@ This gives you full flexibility:
 
 ### Main Screen
 
-| Key | Action |
-| --- | ------ |
-| `↑` or `k` | Move cursor up one row |
-| `↓` or `j` | Move cursor down one row |
-| `Space` | Toggle the highlighted category on (`●`) or off (`○`) |
-| `→` or `l` | Open the Preview screen for the highlighted category |
-| `Enter` | Start cleaning all selected (`●`) categories |
-| `A` | Select all Safe `[S]` and Moderate `[M]` categories (Risky `[R]` are always skipped) |
-| `N` | Deselect all categories |
-| `D` | Toggle Dry-Run mode on/off (no files are deleted in dry-run) |
-| `S` | Open the System Status dashboard |
-| `W` | Open the Whitelist screen |
-| `Q` | Quit MacBroom |
+| Key        | Action                                                                               |
+| ---------- | ------------------------------------------------------------------------------------ |
+| `↑` or `k` | Move cursor up one row                                                               |
+| `↓` or `j` | Move cursor down one row                                                             |
+| `Space`    | Toggle the highlighted category on (`●`) or off (`○`)                                |
+| `→` or `l` | Open the Preview screen for the highlighted category                                 |
+| `Enter`    | Start cleaning all selected (`●`) categories                                         |
+| `A`        | Select all Safe `[S]` and Moderate `[M]` categories (Risky `[R]` are always skipped) |
+| `N`        | Deselect all categories                                                              |
+| `D`        | Toggle Dry-Run mode on/off (no files are deleted in dry-run)                         |
+| `S`        | Open the System Status dashboard                                                     |
+| `W`        | Open the Whitelist screen                                                            |
+| `Q`        | Quit MacBroom                                                                        |
 
 ### Preview Screen
 
-| Key | Action |
-| --- | ------ |
-| `↑` or `k` | Move cursor up one row |
-| `↓` or `j` | Move cursor down one row |
-| `Space` | Check `[✓]` or uncheck `[ ]` the highlighted item |
-| `A` | Check all currently visible items (respects active filter) |
-| `N` | Uncheck all currently visible items (respects active filter) |
-| `Enter` | **If cursor is on an unchecked folder:** drill into it. **If any items are checked:** delete all checked items. |
-| `←` or `h` | Go back one level (if inside a subfolder) or return to Main screen |
-| `Esc` | If a filter is active: clear the filter. Otherwise: return to Main screen. |
-| `/` | Enter filter mode — type to search items by name (case-insensitive, real-time) |
-| `Backspace` | Delete the last character of the search filter |
-| `Q` | Quit MacBroom |
+| Key         | Action                                                                                                          |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| `↑` or `k`  | Move cursor up one row                                                                                          |
+| `↓` or `j`  | Move cursor down one row                                                                                        |
+| `Space`     | Check `[✓]` or uncheck `[ ]` the highlighted item                                                               |
+| `A`         | Check all currently visible items (respects active filter)                                                      |
+| `N`         | Uncheck all currently visible items (respects active filter)                                                    |
+| `Enter`     | **If cursor is on an unchecked folder:** drill into it. **If any items are checked:** delete all checked items. |
+| `←` or `h`  | Go back one level (if inside a subfolder) or return to Main screen                                              |
+| `Esc`       | If a filter is active: clear the filter. Otherwise: return to Main screen.                                      |
+| `/`         | Enter filter mode — type to search items by name (case-insensitive, real-time)                                  |
+| `Backspace` | Delete the last character of the search filter                                                                  |
+| `Q`         | Quit MacBroom                                                                                                   |
 
 ### Status Screen
 
-| Key | Action |
-| --- | ------ |
-| `R` | Refresh — re-collect all CPU/RAM/process metrics |
-| `←` or `Q` | Return to Main screen |
+| Key        | Action                                           |
+| ---------- | ------------------------------------------------ |
+| `R`        | Refresh — re-collect all CPU/RAM/process metrics |
+| `←` or `Q` | Return to Main screen                            |
 
 ### Whitelist Screen
 
-| Key | Action |
-| --- | ------ |
-| `↑` / `↓` | Move cursor between entries |
-| `A` | Enter add mode — type a path and press Enter to confirm |
-| `D` | Delete the highlighted entry |
-| `Enter` | Confirm typed path (in add mode) |
-| `Backspace` | Delete last character (in add mode) |
-| `←` or `Q` | Return to Main screen |
+| Key         | Action                                                  |
+| ----------- | ------------------------------------------------------- |
+| `↑` / `↓`   | Move cursor between entries                             |
+| `A`         | Enter add mode — type a path and press Enter to confirm |
+| `D`         | Delete the highlighted entry                            |
+| `Enter`     | Confirm typed path (in add mode)                        |
+| `Backspace` | Delete last character (in add mode)                     |
+| `←` or `Q`  | Return to Main screen                                   |
 
 ### Done Screen
 
-| Key | Action |
-| --- | ------ |
+| Key                | Action                                                             |
+| ------------------ | ------------------------------------------------------------------ |
 | Any key (except Q) | Rescan all categories and return to Main screen with updated sizes |
-| `Q` | Quit MacBroom |
+| `Q`                | Quit MacBroom                                                      |
 
 ### Dry-Run Mode
 
@@ -606,7 +613,7 @@ Press `D` on the Main screen to activate Dry-Run mode. The title bar changes to 
 - Scanning and all file listings are real — you see actual sizes and actual file names
 - The Preview screen works normally
 - Pressing `Enter` to clean **does not delete anything**
-- The Done screen shows how much *would have been* freed
+- The Done screen shows how much _would have been_ freed
 - Press `D` again to turn Dry-Run mode off
 
 Dry-Run is the safest way to understand exactly what MacBroom would do before committing to a real clean.
@@ -619,11 +626,11 @@ Dry-Run is the safest way to understand exactly what MacBroom would do before co
 
 Every category has a badge that tells you how safe it is to clean. These badges are shown in the info bar as you navigate.
 
-| Badge | Name | What it means |
-| ----- | ---- | -------------- |
-| `[S]` **green** | **Safe** | Pure caches that apps rebuild automatically. No data loss, no side effects. |
-| `[M]` **yellow** | **Moderate** | Safe to remove, but some apps may be slightly slower on first launch while they rebuild indexes or re-download dependencies. |
-| `[R]` **red** | **Risky** | Permanently deletes user data — attachments, backups, AI models. May not be recoverable. **Excluded from the `A` key. Must be selected manually every time.** |
+| Badge            | Name         | What it means                                                                                                                                                 |
+| ---------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[S]` **green**  | **Safe**     | Pure caches that apps rebuild automatically. No data loss, no side effects.                                                                                   |
+| `[M]` **yellow** | **Moderate** | Safe to remove, but some apps may be slightly slower on first launch while they rebuild indexes or re-download dependencies.                                  |
+| `[R]` **red**    | **Risky**    | Permanently deletes user data — attachments, backups, AI models. May not be recoverable. **Excluded from the `A` key. Must be selected manually every time.** |
 
 ---
 
@@ -638,13 +645,15 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 2. Browser Caches — `browser` `[S]`
 
 **What it cleans:** Cache folders for:
+
 - Safari (`com.apple.Safari`)
 - Google Chrome (`com.google.Chrome`)
 - Arc Browser (`company.thebrowser.Browser`)
 - Mozilla Firefox (`org.mozilla.firefox`)
 - Microsoft Edge (`com.microsoft.edgemac`)
 - Brave Browser (`com.brave.Browser`)
-- Opera and other Chromium-based browsers
+- Vivaldi (`Vivaldi`)
+- Opera (`com.operasoftware.Opera`)
 
 **After cleaning:** Web pages load slightly slower on the first visit after cleaning while the browser re-downloads page assets (images, CSS, JavaScript). After that, browsing returns to normal speed.
 
@@ -653,6 +662,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 3. Developer Tool Caches — `dev_tools` `[M]`
 
 **What it cleans:**
+
 - Xcode DerivedData (`~/Library/Developer/Xcode/DerivedData`) — compiled build artifacts and intermediate files generated during iOS/macOS development
 - iOS Simulator caches (`~/Library/Developer/CoreSimulator/Caches`) — device runtime images cached by the Simulator
 
@@ -660,33 +670,34 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 
 ---
 
-### 4. Project Artifacts — `project_artifacts` `[S]` *(deferred)*
+### 4. Project Artifacts — `project_artifacts` `[S]` _(deferred)_
 
 **What it cleans:** Build artifact directories that development tools regenerate automatically, found across your developer project folders. Searches up to 8 directory levels deep inside:
+
 - `~/Desktop`, `~/Documents`, `~/Developer`, `~/Projects`, `~/src`, `~/code`, `~/repos`, `~/workspace`
 
 **Artifact directory names targeted:**
 
-| Name | Tool |
-| ---- | ---- |
-| `node_modules` | npm, yarn, pnpm, bun |
-| `__pycache__` | Python |
-| `.next` | Next.js |
-| `.nuxt` | Nuxt.js |
-| `.pytest_cache` | pytest |
-| `.mypy_cache` | mypy |
-| `.ruff_cache` | ruff |
-| `.turbo` | Turborepo |
-| `.parcel-cache` | Parcel |
-| `.svelte-kit` | SvelteKit |
-| `.build` | Swift Package Manager |
-| `.dart_tool` | Dart / Flutter |
-| `.tox` | tox |
-| `.angular` | Angular CLI |
-| `.vite` | Vite |
-| `.expo` | Expo |
-| `.docusaurus` | Docusaurus |
-| `.cache` | Various build tools |
+| Name            | Tool                  |
+| --------------- | --------------------- |
+| `node_modules`  | npm, yarn, pnpm, bun  |
+| `__pycache__`   | Python                |
+| `.next`         | Next.js               |
+| `.nuxt`         | Nuxt.js               |
+| `.pytest_cache` | pytest                |
+| `.mypy_cache`   | mypy                  |
+| `.ruff_cache`   | ruff                  |
+| `.turbo`        | Turborepo             |
+| `.parcel-cache` | Parcel                |
+| `.svelte-kit`   | SvelteKit             |
+| `.build`        | Swift Package Manager |
+| `.dart_tool`    | Dart / Flutter        |
+| `.tox`          | tox                   |
+| `.angular`      | Angular CLI           |
+| `.vite`         | Vite                  |
+| `.expo`         | Expo                  |
+| `.docusaurus`   | Docusaurus            |
+| `.cache`        | Various build tools   |
 
 > **Why it shows `—` on the Main screen:** This module uses `find` with a depth of 8 across multiple large directories — potentially scanning thousands of subdirectories. Running it at startup alongside 28 other scans would make the initial scan slow. The actual scan runs the moment you open the Preview screen (`→`). When you press `←` to return, the real size replaces `—`.
 
@@ -696,7 +707,13 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 
 ### 5. System & App Logs — `system_logs` `[M]`
 
-**What it cleans:** Log files and crash reports in `~/Library/Logs` that are older than `MB_LOG_AGE_DAYS` days (default: 7). Recent logs are always preserved.
+**What it cleans:** Log files and crash reports older than `MB_LOG_AGE_DAYS` days (default: 7). Recent logs are always preserved. MacBroom's own log directory is never touched.
+
+User logs:
+- `~/Library/Logs` — per-user application logs and crash reports
+
+System logs (requires `sudo -n` access):
+- `/Library/Logs`, `/private/var/log`, `/private/var/db/diagnostics`, `/private/var/db/DiagnosticPipeline`, `/private/var/db/powerlog`
 
 **After cleaning:** Old logs are gone. Apps continue writing new logs normally. No impact on running applications.
 
@@ -713,6 +730,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 7. Node.js & JS Caches — `node_cache` `[S]`
 
 **What it cleans:**
+
 - npm global cache (`~/.npm`)
 - Yarn cache (`~/.yarn`)
 - pnpm content-addressable store (`~/.pnpm-store`)
@@ -726,6 +744,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 8. Python & pip Caches — `python_cache` `[S]`
 
 **What it cleans:**
+
 - pip download cache (`~/.cache/pip`)
 - conda package cache (`~/.conda/pkgs`)
 - Poetry cache (`~/.poetry/cache` or `~/.cache/pypoetry`)
@@ -738,6 +757,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 9. JetBrains IDE Caches — `jetbrains_cache` `[M]`
 
 **What it cleans:** Cache and log directories for all JetBrains products found in `~/Library/Caches` and `~/Library/Logs`:
+
 - IntelliJ IDEA, PyCharm, WebStorm, GoLand, CLion, DataGrip, Rider
 - Android Studio (JetBrains distribution)
 - PhpStorm, RubyMine, AppCode, and any other JetBrains IDE
@@ -749,9 +769,12 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 10. VS Code Caches — `vscode_cache` `[S]`
 
 **What it cleans:** Cache directories for:
-- Visual Studio Code (`~/Library/Application Support/Code/Cache`, `CachedData`, `CachedExtensionVSIXs`, etc.)
-- Cursor (`~/Library/Application Support/Cursor/Cache`, etc.)
-- Windsurf (`~/Library/Application Support/Windsurf/Cache`, etc.)
+
+- Visual Studio Code: `Cache`, `CachedData`, `CachedExtensions`, `GPUCache`, `logs`
+- Cursor: `Cache`, `CachedData`
+- Windsurf: `Cache`
+
+All under `~/Library/Application Support/<editor>/`.
 
 **After cleaning:** Each editor regenerates its caches on next launch. Your extensions, settings, and workspace state are not affected.
 
@@ -760,6 +783,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 11. Flutter & Dart Caches — `flutter_cache` `[S]`
 
 **What it cleans:**
+
 - Flutter pub package cache (`~/.pub-cache`)
 - Dart tool cache (`~/.dart`)
 - Flutter tools stamp cache (`~/Library/Caches/flutter_tools`)
@@ -771,6 +795,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 12. Go Module Cache — `go_cache` `[S]`
 
 **What it cleans:**
+
 - Go module download cache (`~/go/pkg/mod/cache`)
 - Go build cache (`~/Library/Caches/go-build`)
 
@@ -781,6 +806,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 13. Rust & Cargo Cache — `rust_cache` `[S]`
 
 **What it cleans:**
+
 - Cargo registry index and downloaded crate sources (`~/.cargo/registry`)
 - Cargo git source cache (`~/.cargo/git`)
 
@@ -791,6 +817,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 14. Ruby & CocoaPods Cache — `ruby_cache` `[S]`
 
 **What it cleans:**
+
 - RubyGems download cache (`~/.gem/cache`)
 - CocoaPods download cache (`~/Library/Caches/CocoaPods`)
 
@@ -801,6 +828,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 15. Homebrew Cache — `brew_cache` `[S]`
 
 **What it cleans:**
+
 - Homebrew download cache — all `.tar.gz`, `.bottle`, and other downloaded archives (location determined dynamically via `brew --cache`, typically `~/Library/Caches/Homebrew`)
 - Old installed formula and cask versions via `brew cleanup --prune=all`
 - Unused leaf dependencies via `brew autoremove`
@@ -816,6 +844,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 16. Java & Gradle Cache — `java_cache` `[S]`
 
 **What it cleans:**
+
 - Gradle module cache (`~/.gradle/caches`)
 - Gradle daemon files (`~/.gradle/daemon`)
 - Gradle build cache (`~/Library/Caches/gradle`)
@@ -827,6 +856,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 17. Docker Build Cache — `docker_cache` `[M]`
 
 **What it cleans:**
+
 - Docker BuildKit cache layers (equivalent to `docker builder prune`)
 - Dangling (untagged) images not referenced by any container
 
@@ -839,6 +869,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 18. Android SDK Cache — `android_cache` `[S]`
 
 **What it cleans:**
+
 - Android SDK temporary files and download cache (`~/Library/Android`)
 - Android emulator cache (`~/.android/cache`)
 
@@ -849,6 +880,7 @@ Every category has a badge that tells you how safe it is to clean. These badges 
 ### 19. iMessage Attachments — `imessage_attachments` `[R]`
 
 **What it cleans:**
+
 - `~/Library/Messages/Attachments` — photos, videos, audio files, and documents received in the Messages app
 - `~/Library/Messages/StickerCache` — downloaded sticker packs
 
@@ -891,7 +923,7 @@ sudo rm /etc/pam.d/sudo_local   # if MacBroom created it
 
 ### 21. Memory Purge — `memory_purge` `[M]`
 
-**What it does:** Calls `memory_pressure -l critical` (or `purge` as fallback) to flush inactive memory pages and return them to the free pool.
+**What it does:** Calls `sudo purge` to flush inactive memory pages and return them to the free pool.
 
 **Important:** This module frees RAM, not disk space. It will always report 0 bytes freed on the Done screen.
 
@@ -904,11 +936,15 @@ sudo rm /etc/pam.d/sudo_local   # if MacBroom created it
 ### 22. App Leftovers — `app_leftovers` `[M]`
 
 **What it cleans:** Support files, preference files, and caches left behind by applications that have been uninstalled. Searches inside:
+
 - `~/Library/Application Support`
 - `~/Library/Caches`
 - `~/Library/Preferences`
+- `~/Library/Logs`
 - `~/Library/Containers`
 - `~/Library/Group Containers`
+- `~/Library/Saved Application State`
+- `~/Library/HTTPStorages`
 
 **Targeted search:** Set the `MB_APP_LEFTOVERS_QUERY` environment variable to search for a specific app's leftovers:
 
@@ -934,6 +970,7 @@ Directories in standard app data locations whose names match a bundle ID pattern
 MacBroom queries Spotlight's `mdfind` to get the full list of installed bundle IDs and compares them against directory names. Anything not matching a known installed app is flagged as an orphan.
 
 Searches:
+
 - `~/Library/Application Support`
 - `~/Library/Containers`
 - `~/Library/Group Containers`
@@ -947,6 +984,7 @@ Returns up to 50 results sorted by size, largest first.
 Hidden directories in your home folder (`~/.<name>`) whose associated command-line tool is no longer installed in `$PATH` and whose name does not match any known tool in MacBroom's exclusion list.
 
 MacBroom scans `~` for directories matching `.*`, then checks:
+
 - Is the directory in `MB_PROTECTED_PATHS`? → skip (always safe)
 - Does a binary named `<name>` exist in `$PATH`? → skip (tool is installed)
 - Is the name in the known-tools list? → skip (tool is known even if binary is missing)
@@ -974,16 +1012,16 @@ Dotfile orphans are labeled `[dotfile] <name>` in the Preview screen so you can 
 
 **System bundle exclusions:** macOS creates many directories for background daemons and system services. MacBroom automatically skips these:
 
-| Excluded prefix | Why |
-| --------------- | --- |
-| `com.apple.*` | macOS system daemons and background services |
-| `com.google.Keystone*` | Google's auto-update framework |
-| `com.microsoft.autoupdate*` | Microsoft's auto-update framework |
-| `com.adobe.acc*`, `com.adobe.AdobeCreativeCloud*` | Adobe's background services |
-| `com.crashlytics.*` | Firebase/Crashlytics crash reporting |
-| `io.fabric.*` | Fabric SDK (now Firebase) |
-| `com.bugsnag.*` | Bugsnag error reporting |
-| `com.sentry.*` | Sentry error reporting |
+| Excluded prefix                                   | Why                                          |
+| ------------------------------------------------- | -------------------------------------------- |
+| `com.apple.*`                                     | macOS system daemons and background services |
+| `com.google.Keystone*`                            | Google's auto-update framework               |
+| `com.microsoft.autoupdate*`                       | Microsoft's auto-update framework            |
+| `com.adobe.acc*`, `com.adobe.AdobeCreativeCloud*` | Adobe's background services                  |
+| `com.crashlytics.*`                               | Firebase/Crashlytics crash reporting         |
+| `io.fabric.*`                                     | Fabric SDK (now Firebase)                    |
+| `com.bugsnag.*`                                   | Bugsnag error reporting                      |
+| `com.sentry.*`                                    | Sentry error reporting                       |
 
 > **Always use Preview (`→`) before cleaning this module.** Despite the exclusions, some third-party apps use a bundle ID that differs from their visible `.app` name. Review the list before deleting.
 
@@ -994,6 +1032,7 @@ Dotfile orphans are labeled `[dotfile] <name>` in the Preview screen so you can 
 **What it cleans:** Disk image and installer files in `~/Downloads` that are older than `MB_INSTALLER_AGE_DAYS` days (default: 14). These accumulate silently after app installation — the app is already installed, and the installer file is no longer needed.
 
 **File types targeted:**
+
 - `.dmg` — macOS disk images (most common installer format)
 - `.pkg` — macOS package installers
 - `.iso` — optical disk images
@@ -1012,9 +1051,10 @@ export MB_INSTALLER_AGE_DAYS=30   # only clean installers older than 30 days (de
 
 ---
 
-### 25. Large Old Files — `large_old_files` `[M]` *(deferred)*
+### 25. Large Old Files — `large_old_files` `[M]` _(deferred)_
 
-**What it cleans:** Files larger than `MB_LOF_MIN_SIZE_MB` MB (default: 500 MB) that have not been accessed in more than 180 days. Searches inside:
+**What it cleans:** Files larger than `MB_LOF_MIN_SIZE_MB` MB (default: 500 MB) that have not been accessed in more than 180 days. Searches up to 6 levels deep inside:
+
 - `~/Downloads`
 - `~/Documents`
 - `~/Desktop`
@@ -1022,7 +1062,7 @@ export MB_INSTALLER_AGE_DAYS=30   # only clean installers older than 30 days (de
 - `~/Movies`
 - `~/Pictures`
 
-**Why it shows `—` on the Main screen:** This module uses `find` to walk potentially large directories, which takes too long to run at startup alongside 28 other scans. The actual scan runs the moment you open the Preview screen (`→`). When you press `←` to return, the real size replaces `—` and the module participates correctly in the size ranking.
+**Why it shows `—` on the Main screen:** This module uses `find` across multiple large directories, which takes too long to run at startup alongside 28 other scans. The actual scan runs the moment you open the Preview screen (`→`). When you press `←` to return, the real size replaces `—` and the module participates correctly in the size ranking.
 
 **After cleaning:** Files are permanently deleted. This module targets personal files (videos, disk images, archives), not system caches.
 
@@ -1033,6 +1073,7 @@ export MB_INSTALLER_AGE_DAYS=30   # only clean installers older than 30 days (de
 ### 26. iOS Backups — `ios_backups` `[R]`
 
 **What it cleans:** iPhone and iPad backup folders created by Finder (macOS Catalina+) or iTunes:
+
 - `~/Library/Application Support/MobileSync/Backup`
 
 **After cleaning:** The backup is permanently deleted. MacBroom cannot recover it. Always make a fresh backup via Finder before running this module.
@@ -1043,7 +1084,12 @@ export MB_INSTALLER_AGE_DAYS=30   # only clean installers older than 30 days (de
 
 ### 27. Mail Attachments — `mail_attachments` `[M]`
 
-**What it cleans:** Locally cached email attachments in `~/Library/Mail` that are older than `MB_MAIL_AGE_DAYS` days (default: 90).
+**What it cleans:** Locally cached email attachments older than `MB_MAIL_AGE_DAYS` days (default: 90). Searches:
+
+- `~/Library/Mail` — main Mail data directory
+- `~/Library/Containers/com.apple.mail/Data/Library/Mail Downloads`
+
+Mail.app must be closed before cleaning. If Mail is running, this module is skipped automatically.
 
 **After cleaning:** The Mail app re-downloads attachments from the server the next time you open the relevant email. If the original email has been deleted from the server, the attachment may be unrecoverable.
 
@@ -1052,6 +1098,7 @@ export MB_INSTALLER_AGE_DAYS=30   # only clean installers older than 30 days (de
 ### 28. AI Model Cache — `ai_models` `[R]`
 
 **What it cleans:**
+
 - Ollama model files (`~/.ollama/models`)
 - LM Studio models (`~/Library/Application Support/LM Studio/models`)
 - HuggingFace model cache (`~/.cache/huggingface`)
@@ -1066,6 +1113,7 @@ export MB_INSTALLER_AGE_DAYS=30   # only clean installers older than 30 days (de
 ### 29. Trash — `trash` `[R]`
 
 **What it cleans:**
+
 - `~/.Trash` — your main Trash folder
 - `.Trashes` folders on any mounted external drives (`/Volumes/*/.Trashes`)
 
@@ -1090,6 +1138,7 @@ Path: /com.google.Chrome/Default/Cache/
 You can navigate and select files at this deeper level exactly as you would at the top level. Press `←` or `h` to go back up one level.
 
 **The rule for Enter in Preview:**
+
 - Cursor on an **unchecked directory** → drill into it
 - **Any items are checked** → delete everything that is checked (regardless of cursor position)
 
@@ -1144,11 +1193,11 @@ Example scan output:
 
 ```json
 {
-  "disk": {"used_kb": 921600000, "total_kb": 994050048, "free_kb": 72450048},
+  "disk": { "used_kb": 921600000, "total_kb": 994050048, "free_kb": 72450048 },
   "modules": [
-    {"id": "user_caches", "label": "User App Caches", "size_kb": 2150400},
-    {"id": "browser", "label": "Browser Caches", "size_kb": 1331200},
-    {"id": "brew_cache", "label": "Homebrew Cache", "size_kb": 757760}
+    { "id": "user_caches", "label": "User App Caches", "size_kb": 2150400 },
+    { "id": "browser", "label": "Browser Caches", "size_kb": 1331200 },
+    { "id": "brew_cache", "label": "Homebrew Cache", "size_kb": 757760 }
   ]
 }
 ```
@@ -1190,26 +1239,26 @@ Prints a single summary line on completion:
 
 ## CLI Reference
 
-| Command | Description |
-| ------- | ----------- |
-| `macbroom` | Open the interactive TUI |
-| `macbroom --dry-run` | Open the TUI in Dry-Run mode |
-| `macbroom --version` | Print version string |
-| `macbroom --help` | Print usage reference |
-| `macbroom scan` | Print a disk usage report for all 29 categories |
-| `macbroom scan --json` | Same, as JSON |
-| `macbroom list <module>` | List individual items inside a category |
-| `macbroom list <module> --json` | Same, as JSON |
-| `macbroom clean <module> [<module>...]` | Clean one or more specific categories |
-| `macbroom clean --all` | Clean all categories (including Risky) |
-| `macbroom clean --all --dry-run` | Preview what `--all` would delete |
-| `macbroom --log list` | List all recorded deletion log sessions |
-| `macbroom --log last` | Show what was deleted in the last session |
-| `macbroom --install-cron [days] [level]` | Schedule automatic cleaning |
-| `macbroom --remove-cron` | Remove the scheduled job |
-| `macbroom --cron-status` | Show current schedule |
-| `macbroom --headless --safe` | Silent clean, Safe categories only |
-| `macbroom --headless --moderate` | Silent clean, Safe + Moderate categories |
+| Command                                  | Description                                     |
+| ---------------------------------------- | ----------------------------------------------- |
+| `macbroom`                               | Open the interactive TUI                        |
+| `macbroom --dry-run`                     | Open the TUI in Dry-Run mode                    |
+| `macbroom --version`                     | Print version string                            |
+| `macbroom --help`                        | Print usage reference                           |
+| `macbroom scan`                          | Print a disk usage report for all 29 categories |
+| `macbroom scan --json`                   | Same, as JSON                                   |
+| `macbroom list <module>`                 | List individual items inside a category         |
+| `macbroom list <module> --json`          | Same, as JSON                                   |
+| `macbroom clean <module> [<module>...]`  | Clean one or more specific categories           |
+| `macbroom clean --all`                   | Clean all categories (including Risky)          |
+| `macbroom clean --all --dry-run`         | Preview what `--all` would delete               |
+| `macbroom --log list`                    | List all recorded deletion log sessions         |
+| `macbroom --log last`                    | Show what was deleted in the last session       |
+| `macbroom --install-cron [days] [level]` | Schedule automatic cleaning                     |
+| `macbroom --remove-cron`                 | Remove the scheduled job                        |
+| `macbroom --cron-status`                 | Show current schedule                           |
+| `macbroom --headless --safe`             | Silent clean, Safe categories only              |
+| `macbroom --headless --moderate`         | Silent clean, Safe + Moderate categories        |
 
 **Valid module IDs for `list` and `clean`:**
 
@@ -1239,14 +1288,14 @@ export MB_INSTALLER_AGE_DAYS=30   # Delete installers older than 30 days (defaul
 export MB_APP_LEFTOVERS_QUERY=""   # App name to filter in the App Leftovers module
 ```
 
-| Variable | Default | Description |
-| -------- | ------- | ----------- |
-| `MB_LOG_AGE_DAYS` | `7` | Minimum age in days for log files to be eligible for deletion |
-| `MB_TEMP_AGE_DAYS` | `3` | Minimum age in days for temp files to be eligible for deletion |
-| `MB_MAIL_AGE_DAYS` | `90` | Minimum age in days for Mail attachment caches to be eligible for deletion |
-| `MB_LOF_MIN_SIZE_MB` | `500` | Minimum file size (MB) for the Large Old Files module |
-| `MB_INSTALLER_AGE_DAYS` | `14` | Minimum age in days for installer files (`.dmg`, `.pkg`, `.iso`) to be eligible for deletion |
-| `MB_APP_LEFTOVERS_QUERY` | *(empty)* | If set, the App Leftovers module searches only for files matching this app name |
+| Variable                 | Default   | Description                                                                                  |
+| ------------------------ | --------- | -------------------------------------------------------------------------------------------- |
+| `MB_LOG_AGE_DAYS`        | `7`       | Minimum age in days for log files to be eligible for deletion                                |
+| `MB_TEMP_AGE_DAYS`       | `3`       | Minimum age in days for temp files to be eligible for deletion                               |
+| `MB_MAIL_AGE_DAYS`       | `90`      | Minimum age in days for Mail attachment caches to be eligible for deletion                   |
+| `MB_LOF_MIN_SIZE_MB`     | `500`     | Minimum file size (MB) for the Large Old Files module                                        |
+| `MB_INSTALLER_AGE_DAYS`  | `14`      | Minimum age in days for installer files (`.dmg`, `.pkg`, `.iso`) to be eligible for deletion |
+| `MB_APP_LEFTOVERS_QUERY` | _(empty)_ | If set, the App Leftovers module searches only for files matching this app name              |
 
 ---
 
@@ -1273,7 +1322,8 @@ The complete list of permitted prefixes (as declared in `lib/core.sh`):
 ~/Library/Application Support/Code        ~/Library/Application Support/Cursor
 ~/Library/Application Support/Windsurf    ~/Library/Application Support/LM Studio
 ~/Library/Logs/JetBrains
-~/.Trash        ~/.npm          ~/.yarn         ~/.pnpm-store    ~/.bun
+~/.Trash        /Volumes/*/.Trashes/<uid> (external drive trash, current user only)
+~/.npm          ~/.yarn         ~/.pnpm-store    ~/.bun
 ~/.gradle       ~/.m2           ~/.pub-cache     ~/.dart
 ~/.cargo/registry  ~/.cargo/git
 ~/.gem          ~/.conda        ~/.pyenv         ~/.poetry
@@ -1298,34 +1348,33 @@ Everything else — system directories, application binaries, network configurat
 
 Even within the allowlist, a second check permanently blocks deletion of critical configuration files and directories. These paths are checked before the allowlist and always refuse deletion, regardless of any other logic:
 
-| Protected path | What it protects |
-| -------------- | ---------------- |
-| `~/.ssh` | SSH private keys and known hosts |
-| `~/.gnupg`, `~/.gpg` | GPG encryption keys |
-| `~/.aws` | AWS credentials and configuration |
-| `~/.kube` | Kubernetes configuration |
-| `~/.docker` | Docker credentials and daemon configuration |
-| `~/.netrc` | Network authentication credentials |
-| `~/.gitconfig`, `~/.gitignore`, `~/.gitignore_global` | Git global configuration |
-| `~/.zshrc`, `~/.bashrc`, `~/.profile` | Shell configuration files |
-| `~/.zsh_history`, `~/.bash_history` | Shell command history |
-| `~/.zsh_sessions`, `~/.bash_sessions` | Shell session state |
-| `~/.oh-my-zsh` | Oh My Zsh framework |
-| `~/.nvm` | Node Version Manager (contains installed Node versions) |
-| `~/.rbenv` | Ruby version manager |
-| `~/.pyenv` | Python version manager |
-| `~/.asdf` | Multi-language version manager |
-| `~/.sdkman` | Java SDK manager |
-| `~/.volta` | JavaScript toolchain manager |
-| `~/.tfenv` | Terraform version manager |
-| `~/.gvm` | Go version manager |
-| `~/.config` | XDG configuration directory |
-| `~/.local` | XDG local data directory |
-| `~/.Spotlight-V100` | Spotlight index |
-| `~/.fseventsd` | File system events daemon |
-| `~/.Trash` | User trash (managed by macOS, not deleted directly) |
-| `~/.TemporaryItems` | macOS temporary items |
-| `~/.DocumentRevisions-V100` | macOS document versions |
+| Protected path                                        | What it protects                                        |
+| ----------------------------------------------------- | ------------------------------------------------------- |
+| `~/.ssh`                                              | SSH private keys and known hosts                        |
+| `~/.gnupg`, `~/.gpg`                                  | GPG encryption keys                                     |
+| `~/.aws`                                              | AWS credentials and configuration                       |
+| `~/.kube`                                             | Kubernetes configuration                                |
+| `~/.docker`                                           | Docker credentials and daemon configuration             |
+| `~/.netrc`                                            | Network authentication credentials                      |
+| `~/.gitconfig`, `~/.gitignore`, `~/.gitignore_global` | Git global configuration                                |
+| `~/.zshrc`, `~/.bashrc`, `~/.profile`                 | Shell configuration files                               |
+| `~/.zsh_history`, `~/.bash_history`                   | Shell command history                                   |
+| `~/.zsh_sessions`, `~/.bash_sessions`                 | Shell session state                                     |
+| `~/.oh-my-zsh`                                        | Oh My Zsh framework                                     |
+| `~/.nvm`                                              | Node Version Manager (contains installed Node versions) |
+| `~/.rbenv`                                            | Ruby version manager                                    |
+| `~/.pyenv`                                            | Python version manager                                  |
+| `~/.asdf`                                             | Multi-language version manager                          |
+| `~/.sdkman`                                           | Java SDK manager                                        |
+| `~/.volta`                                            | JavaScript toolchain manager                            |
+| `~/.tfenv`                                            | Terraform version manager                               |
+| `~/.gvm`                                              | Go version manager                                      |
+| `~/.config`                                           | XDG configuration directory                             |
+| `~/.local`                                            | XDG local data directory                                |
+| `~/.Spotlight-V100`                                   | Spotlight index                                         |
+| `~/.fseventsd`                                        | File system events daemon                               |
+| `~/.TemporaryItems`                                   | macOS temporary items                                   |
+| `~/.DocumentRevisions-V100`                           | macOS document versions                                 |
 
 ### Safeguard 3 — User Whitelist
 
@@ -1369,12 +1418,13 @@ For readers who want to verify the safety claims themselves, here is how the enf
 
 1. Every module calls `mb_safe_rm "$path"` — there is no other deletion path in the codebase
 2. `mb_safe_rm()` (in `lib/core.sh`) refuses `"/"` and `"$HOME"` immediately as a hard guard
-3. It then iterates `MB_PROTECTED_PATHS` — refuses and returns 1 if matched
-4. It then checks `MB_WHITELIST` — skips and warns if matched
-5. It then iterates `MB_SAFE_PREFIXES` — refuses and logs if no prefix matches
-6. If the path is a symlink, it recursively calls `mb_is_safe_path()` on the resolved target
-7. Only if all checks pass does it call `rm -rf -- "$target"` (the `--` prevents path-as-flag injection)
-8. The deletion is logged unconditionally after success
+3. External volume trash (`/Volumes/*/.Trashes/<uid>`) is explicitly allowed for the current user
+4. It then iterates `MB_PROTECTED_PATHS` — refuses and returns 1 if matched
+5. It then checks `MB_WHITELIST` — skips and warns if matched
+6. It then iterates `MB_SAFE_PREFIXES` — refuses and logs if no prefix matches
+7. If the path is a symlink, it recursively calls `mb_is_safe_path()` on the resolved target
+8. Only if all checks pass does it call `rm -rf -- "$target"` (the `--` prevents path-as-flag injection)
+9. The deletion is logged unconditionally after success
 
 Both `MB_SAFE_PREFIXES` and `MB_PROTECTED_PATHS` are declared as `readonly -a` arrays at startup — no code can append to, clear, or reassign them at runtime.
 
@@ -1384,9 +1434,10 @@ Both `MB_SAFE_PREFIXES` and `MB_PROTECTED_PATHS` are declared as `readonly -a` a
 
 After cleaning, the disk bar in MacBroom (and in Finder / About This Mac) often does not immediately show a smaller number — even though the Done screen reported several gigabytes freed. This is not a bug.
 
-**The reason:** macOS uses APFS (Apple File System), which has a concept called *purgeable space*. When a file is deleted, the blocks it occupied are not immediately returned to the free pool. Instead, they are marked as *purgeable* — space that macOS can reclaim when another app needs room. The actual reclaim happens in the background, triggered by memory pressure or a manual `purge` command.
+**The reason:** macOS uses APFS (Apple File System), which has a concept called _purgeable space_. When a file is deleted, the blocks it occupied are not immediately returned to the free pool. Instead, they are marked as _purgeable_ — space that macOS can reclaim when another app needs room. The actual reclaim happens in the background, triggered by memory pressure or a manual `purge` command.
 
 **What the numbers mean:**
+
 - **Total Freed** on the Done screen = the accurate total of what was deleted from disk
 - **Disk bar** = what macOS has physically reclaimed so far (may lag by minutes to an hour)
 - **APFS Purgeable** on the Main screen = space macOS is holding as reclaimable
@@ -1473,11 +1524,11 @@ Expected output:
 
 **What the tests cover:**
 
-| Test file | What it tests |
-| --------- | ------------- |
-| `test_core.bats` | `mb_is_safe_path` allowlist enforcement, protected path blocking, HOME itself refused, trailing slash normalization, symlink target validation (safe link, unsafe link, link to `.ssh`), `mb_safe_rm` delete/refuse/idempotent/root/HOME behavior, `mb_format_bytes` formatting for all size ranges |
+| Test file                  | What it tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test_core.bats`           | `mb_is_safe_path` allowlist enforcement, protected path blocking, HOME itself refused, trailing slash normalization, symlink target validation (safe link, unsafe link, link to `.ssh`), `mb_safe_rm` delete/refuse/idempotent/root/HOME behavior, `mb_format_bytes` formatting for all size ranges                                                                                                                                                                                                                                          |
 | `test_orphaned_files.bats` | `_is_system_bundle` exclusions for all vendor prefixes (`com.apple.*`, `com.google.Keystone`, `com.microsoft.autoupdate`, `com.adobe.acc`, `com.crashlytics.*`, `io.fabric.*`, `com.bugsnag.*`, `com.sentry.*`); user apps that must NOT be excluded (`com.spotify.client`, `com.google.Chrome`, `org.mozilla.firefox`, `io.cursor.app`, `net.whatsapp.WhatsApp`); `_is_likely_bundle_dir` pattern matching for `com.*`, `org.*`, `io.*`, `net.*`, plain names, numeric names, hidden dirs; edge cases for partial matches and empty strings |
-| `test_maintenance.bats` | `maintenance_scan` always returns 0; dry-run exits 0 with no snapshots; output contains "Flush DNS", "Font Cache", "Launch Services"; "none found" message with no snapshots; snapshot count display with 2 simulated snapshots; irreversible warning when snapshots present; `result_file` written correctly; non-dry-run writes 0 to result_file |
+| `test_maintenance.bats`    | `maintenance_scan` always returns 0; dry-run exits 0 with no snapshots; output contains "Flush DNS", "Font Cache", "Launch Services"; "none found" message with no snapshots; snapshot count display with 2 simulated snapshots; irreversible warning when snapshots present; `result_file` written correctly; non-dry-run writes 0 to result_file                                                                                                                                                                                           |
 
 ---
 
@@ -1501,17 +1552,17 @@ Each module file implements up to four Bash functions. Create `modules/<name>.sh
 
 Then `source` the file in `macbroom` and add one entry to each registry array:
 
-| Array | Purpose |
-| ----- | ------- |
-| `MB_MOD_NAMES` | Internal ID used by CLI commands (e.g. `brew_cache`) |
-| `MB_MOD_LABELS` | Display name shown in the TUI (e.g. `"Homebrew Cache"`) |
-| `MB_MOD_DESCS` | One-line description shown in the info bar |
-| `MB_MOD_EFFECTS` | One sentence explaining what happens after deletion |
-| `MB_MOD_SAFETY` | `"safe"`, `"moderate"`, or `"risky"` |
-| `MB_MOD_SCAN_FNS` | Reference to the `_scan` function |
-| `MB_MOD_LIST_FNS` | Reference to the `_list` function |
-| `MB_MOD_CLEAN_FNS` | Reference to the `_clean` function |
-| `MB_MOD_DEFERRED` | `1` to skip at startup and scan lazily when Preview opens; `0` to scan immediately |
+| Array              | Purpose                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `MB_MOD_NAMES`     | Internal ID used by CLI commands (e.g. `brew_cache`)                               |
+| `MB_MOD_LABELS`    | Display name shown in the TUI (e.g. `"Homebrew Cache"`)                            |
+| `MB_MOD_DESCS`     | One-line description shown in the info bar                                         |
+| `MB_MOD_EFFECTS`   | One sentence explaining what happens after deletion                                |
+| `MB_MOD_SAFETY`    | `"safe"`, `"moderate"`, or `"risky"`                                               |
+| `MB_MOD_SCAN_FNS`  | Reference to the `_scan` function                                                  |
+| `MB_MOD_LIST_FNS`  | Reference to the `_list` function                                                  |
+| `MB_MOD_CLEAN_FNS` | Reference to the `_clean` function                                                 |
+| `MB_MOD_DEFERRED`  | `1` to skip at startup and scan lazily when Preview opens; `0` to scan immediately |
 
 All arrays must have the same length. Array indices are used as the module identifier throughout the TUI.
 
@@ -1554,6 +1605,7 @@ my_cache_clean() {
 Then in `macbroom`, add `source modules/my_cache.sh` and append one entry to each of the 9 registry arrays.
 
 **Important rules for modules:**
+
 - Always call `mb_safe_rm` for deletions — never call `rm` directly
 - Never modify `MB_SAFE_PREFIXES` or `MB_PROTECTED_PATHS` (they are `readonly`)
 - Print size in KB to stdout from `_scan` — no other output
@@ -1573,6 +1625,7 @@ This is expected. Both modules use `find` across potentially large directory tre
 **A module shows 0 bytes**
 
 Either the tool required by that module is not installed, or its data directory does not exist yet:
+
 - `brew_cache`: requires `brew` in `$PATH`
 - `docker_cache`: requires Docker Desktop installed and the Docker daemon running
 - `go_cache`: requires `go` in `$PATH`
@@ -1586,7 +1639,7 @@ Press `R` to refresh. The dashboard collects metrics once when you open it and d
 
 **A whitelisted path is still being shown in a module's Preview**
 
-The whitelist protects paths from *deletion* — it does not hide them from Preview listings. The module will still detect and list the path, but `mb_safe_rm` will refuse to delete it and print a warning when you press Enter. This is intentional: you can still see what's there without any risk.
+The whitelist protects paths from _deletion_ — it does not hide them from Preview listings. The module will still detect and list the path, but `mb_safe_rm` will refuse to delete it and print a warning when you press Enter. This is intentional: you can still see what's there without any risk.
 
 **The TUI looks garbled or misaligned**
 
@@ -1645,4 +1698,4 @@ MIT License. Copyright (c) 2026 AarontheGalaxy.
 
 ---
 
-*MacBroom v1.2.0 — built for macOS power users who want fast, transparent, and safe disk cleanup without black-box GUIs or third-party runtimes.*
+_MacBroom v1.2.0 — built for macOS power users who want fast, transparent, and safe disk cleanup without black-box GUIs or third-party runtimes._
